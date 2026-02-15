@@ -69,9 +69,13 @@ const AddProperty: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === "distanceFromHighway" || name === "categoryId"
+        name === "categoryId"
           ? Number(value)
-          : value,
+          : name === "distanceFromHighway"
+            ? value === ""
+              ? undefined
+              : Number(value)
+            : value,
     }));
   };
 
@@ -122,6 +126,13 @@ const AddProperty: React.FC = () => {
     if (!formData.area.trim()) newErrors.area = "Area is required";
     if (!formData.description.trim())
       newErrors.description = "Description is required";
+    if (
+      formData.distanceFromHighway !== undefined &&
+      formData.distanceFromHighway < 0
+    ) {
+      newErrors.distanceFromHighway =
+        "Distance from highway cannot be negative";
+    }
 
     if (
       formData.areaNepali &&
@@ -342,12 +353,18 @@ const AddProperty: React.FC = () => {
             </label>
             <input
               type="number"
+              min={0}
               step={100}
               name="distanceFromHighway"
               value={formData.distanceFromHighway ?? ""}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
             />
+            {errors.distanceFromHighway && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.distanceFromHighway}
+              </p>
+            )}
           </div>
 
           {/* Images */}

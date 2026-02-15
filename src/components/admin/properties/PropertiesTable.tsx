@@ -25,6 +25,10 @@ interface Property {
   updatedAt?: string;
 }
 
+interface PropertiesApiResponse {
+  data: Property[];
+}
+
 export default function PropertyTable() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
@@ -44,24 +48,29 @@ export default function PropertyTable() {
         throw new Error("Backend is not reachable");
       }
 
-      const data: Property[] = await res.json();
-      const cleaned: any = data.map(
+      const payload = (await res.json()) as Property[] | PropertiesApiResponse;
+      const rows = Array.isArray(payload) ? payload : (payload?.data ?? []);
+
+      const cleaned: any = rows.map(
         ({ createdAt, updatedAt, categoryId, description, ...rest }) => ({
           ...rest,
           area: `${rest.area} sq ft`,
-          distanceFromHighway: `${rest.distanceFromHighway}m`,
+          distanceFromHighway:
+            rest.distanceFromHighway !== undefined
+              ? `${rest.distanceFromHighway}m`
+              : "N/A",
           roi: `${rest.roi}%`,
           price: `Nrs. ${rest.price} per aana`,
           category: rest.category?.name ?? "N/A",
           images: `${rest.images.length} image(s)`,
-        })
+        }),
       );
       setProperties(cleaned);
       setFilteredProperties(cleaned);
     } catch (err: any) {
       console.error("Failed to fetch properties:", err);
       setErrorMsg(
-        "Cannot connect to backend server. Please make sure it’s running."
+        "Cannot connect to backend server. Please make sure it’s running.",
       );
     } finally {
       setLoading(false);
@@ -92,7 +101,7 @@ export default function PropertyTable() {
     router.push(`/admin/editProperty/${row.id}`);
   const handleDelete = async (row: Property) => {
     const confirmDelete = confirm(
-      "Are you sure you want to delete this property?"
+      "Are you sure you want to delete this property?",
     );
     if (!confirmDelete) return;
     try {
@@ -100,7 +109,7 @@ export default function PropertyTable() {
         `http://localhost:3000/api/properties/${row.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
       if (!res.ok) throw new Error("Failed to delete property");
       alert("Property deleted successfully");
@@ -163,6 +172,7 @@ export default function PropertyTable() {
 
       <Table<Property>
         data={filteredProperties}
+        hiddenColumns={["priceNpr", "roiPercent", "areaSqft"]}
         onRowClick={handleRowClick}
         onEdit={handleEdit}
         onDelete={handleDelete}

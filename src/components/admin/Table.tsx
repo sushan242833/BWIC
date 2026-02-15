@@ -5,6 +5,7 @@ interface TableProps<T> {
   onRowClick?: (row: T) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  hiddenColumns?: string[];
 }
 
 export default function Table<T extends Record<string, any>>({
@@ -12,6 +13,7 @@ export default function Table<T extends Record<string, any>>({
   onRowClick,
   onEdit,
   onDelete,
+  hiddenColumns = [],
 }: TableProps<T>) {
   if (!data || data.length === 0) {
     return (
@@ -21,7 +23,9 @@ export default function Table<T extends Record<string, any>>({
     );
   }
 
-  const headers = Object.keys(data[0]);
+  const headers = Object.keys(data[0]).filter(
+    (header) => !hiddenColumns.includes(header),
+  );
 
   return (
     <div
