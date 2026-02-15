@@ -7,6 +7,11 @@ interface Category {
   name: string;
 }
 
+interface LocationSuggestion {
+  placeId: string;
+  description: string;
+}
+
 interface PropertyFormData {
   title: string;
   categoryId: number;
@@ -41,6 +46,13 @@ const AddProperty: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<
+    LocationSuggestion[]
+  >([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [selectedLocationPlaceId, setSelectedLocationPlaceId] = useState("");
+  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -59,6 +71,34 @@ const AddProperty: React.FC = () => {
 
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (locationQuery.trim().length < 2) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setLocationLoading(true);
+        const res = await fetch(
+          `http://localhost:3000/api/locations/autocomplete?q=${encodeURIComponent(
+            locationQuery.trim(),
+          )}`,
+        );
+        if (!res.ok) throw new Error("Failed to fetch location suggestions");
+        const payload = await res.json();
+        setLocationSuggestions(Array.isArray(payload?.data) ? payload.data : []);
+      } catch (error) {
+        console.error("Failed to fetch location suggestions:", error);
+        setLocationSuggestions([]);
+      } finally {
+        setLocationLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [locationQuery]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -101,6 +141,24 @@ const AddProperty: React.FC = () => {
     }
   };
 
+  const handleLocationQueryChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextQuery = e.target.value;
+    setLocationQuery(nextQuery);
+    setIsLocationDropdownOpen(true);
+    setSelectedLocationPlaceId("");
+    setFormData((prev) => ({ ...prev, location: "" }));
+  };
+
+  const handleLocationSelect = (selected: LocationSuggestion) => {
+    setSelectedLocationPlaceId(selected.placeId);
+    setLocationQuery(selected.description);
+    setFormData((prev) => ({ ...prev, location: selected.description }));
+    setLocationSuggestions([]);
+    setIsLocationDropdownOpen(false);
+  };
+
   const removeImage = (index: number) => {
     setFormData((prev) => {
       const updatedImages = [...prev.images];
@@ -119,7 +177,9 @@ const AddProperty: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) newErrors.title = "Title is required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.location.trim()) newErrors.location = "Location is required";
+    if (!formData.location.trim() || !selectedLocationPlaceId) {
+      newErrors.location = "Please select location from Google suggestions";
+    }
     if (!formData.price.trim()) newErrors.price = "Price is required";
     if (!formData.roi.trim()) newErrors.roi = "ROI is required";
     if (!formData.status.trim()) newErrors.status = "Status is required";
@@ -182,6 +242,9 @@ const AddProperty: React.FC = () => {
       console.log("Created property:", data);
 
       setFormData(initialFormData);
+      setLocationQuery("");
+      setLocationSuggestions([]);
+      setSelectedLocationPlaceId("");
       setPreviews([]);
     } catch (error) {
       console.error(error);
@@ -242,17 +305,53 @@ const AddProperty: React.FC = () => {
           </div>
 
           {/* Location */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block font-medium text-gray-700 mb-1">
               Location
             </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={locationQuery}
+                onChange={handleLocationQueryChange}
+                onFocus={() => setIsLocationDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsLocationDropdownOpen(false), 150)}
+                placeholder="Search location..."
+                className="w-full border rounded px-3 py-2"
+              />
+
+              {isLocationDropdownOpen && locationQuery.trim().length >= 2 && (
+                <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
+                  {locationLoading && (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Loading suggestions...
+                    </div>
+                  )}
+
+                  {!locationLoading && locationSuggestions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      No locations found
+                    </div>
+                  )}
+
+                  {!locationLoading &&
+                    locationSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.placeId}
+                        type="button"
+                        onClick={() => handleLocationSelect(suggestion)}
+                        className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                          selectedLocationPlaceId === suggestion.placeId
+                            ? "bg-gray-100"
+                            : ""
+                        }`}
+                      >
+                        {suggestion.description}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
             {errors.location && (
               <p className="text-sm text-red-500 mt-1">{errors.location}</p>
             )}

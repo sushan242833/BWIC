@@ -9,6 +9,11 @@ interface Category {
   name: string;
 }
 
+interface LocationSuggestion {
+  placeId: string;
+  description: string;
+}
+
 interface Property {
   id: number;
   title: string;
@@ -89,6 +94,13 @@ const Properties = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<
+    LocationSuggestion[]
+  >([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [selectedLocationPlaceId, setSelectedLocationPlaceId] = useState("");
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -135,11 +147,57 @@ const Properties = () => {
     fetchProperties();
   }, [appliedFilters, sort, pagination.page, pagination.limit]);
 
+  useEffect(() => {
+    if (locationQuery.trim().length < 2) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setLocationLoading(true);
+        const res = await fetch(
+          `${baseUrl}/api/locations/autocomplete?q=${encodeURIComponent(
+            locationQuery.trim(),
+          )}`,
+        );
+        if (!res.ok) throw new Error("Failed to fetch location suggestions");
+        const payload = await res.json();
+        setLocationSuggestions(Array.isArray(payload?.data) ? payload.data : []);
+      } catch (fetchError) {
+        console.error("Failed to fetch location suggestions:", fetchError);
+        setLocationSuggestions([]);
+      } finally {
+        setLocationLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [locationQuery]);
+
   const handleFilterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLocationQueryChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextQuery = e.target.value;
+    setLocationQuery(nextQuery);
+    setIsLocationDropdownOpen(true);
+    setSelectedLocationPlaceId("");
+    setFilters((prev) => ({ ...prev, location: nextQuery }));
+  };
+
+  const handleLocationSelect = (suggestion: LocationSuggestion) => {
+    setSelectedLocationPlaceId(suggestion.placeId);
+    setLocationQuery(suggestion.description);
+    setFilters((prev) => ({ ...prev, location: suggestion.description }));
+    setLocationSuggestions([]);
+    setIsLocationDropdownOpen(false);
   };
 
   const applyFilters = () => {
@@ -153,6 +211,10 @@ const Properties = () => {
     setFilters(defaultFilters);
     setAppliedFilters(defaultFilters);
     setSort("newest");
+    setLocationQuery("");
+    setLocationSuggestions([]);
+    setSelectedLocationPlaceId("");
+    setIsLocationDropdownOpen(false);
     setPagination((prev) => ({ ...prev, page: 1 }));
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -212,13 +274,49 @@ const Properties = () => {
           }`}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <input
-              name="location"
-              placeholder="Location"
-              value={filters.location}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
+            <div className="relative">
+              <input
+                name="location"
+                placeholder="Location"
+                value={locationQuery}
+                onChange={handleLocationQueryChange}
+                onFocus={() => setIsLocationDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsLocationDropdownOpen(false), 150)}
+                className="w-full px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
+              />
+
+              {isLocationDropdownOpen && locationQuery.trim().length >= 2 && (
+                <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-600 bg-slate-900 shadow-lg max-h-64 overflow-auto">
+                  {locationLoading && (
+                    <div className="px-3 py-2 text-sm text-slate-300">
+                      Loading suggestions...
+                    </div>
+                  )}
+
+                  {!locationLoading && locationSuggestions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-slate-400">
+                      No locations found
+                    </div>
+                  )}
+
+                  {!locationLoading &&
+                    locationSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.placeId}
+                        type="button"
+                        onClick={() => handleLocationSelect(suggestion)}
+                        className={`block w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700 ${
+                          selectedLocationPlaceId === suggestion.placeId
+                            ? "bg-slate-700"
+                            : ""
+                        }`}
+                      >
+                        {suggestion.description}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
 
             <select
               name="categoryId"
