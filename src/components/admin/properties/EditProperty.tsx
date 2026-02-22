@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { baseUrl } from "@/pages/api/rest_api";
 
 interface Category {
   id: number;
@@ -69,13 +70,13 @@ const EditProperty: React.FC = () => {
     const fetchData = async () => {
       try {
         const [catRes, propRes] = await Promise.all([
-          fetch("http://localhost:3000/api/categories"),
-          fetch(`http://localhost:3000/api/properties/${id}`),
+          fetch(`${baseUrl}/api/categories`),
+          fetch(`${baseUrl}/api/properties/${id}`),
         ]);
 
         if (!catRes.ok || !propRes.ok) throw new Error("Failed to fetch data");
 
-        const imageBaseUrl = "http://localhost:3000";
+        const imageBaseUrl = baseUrl;
         const categories = await catRes.json();
         const property = await propRes.json();
 
@@ -122,7 +123,7 @@ const EditProperty: React.FC = () => {
       try {
         setLocationLoading(true);
         const res = await fetch(
-          `http://localhost:3000/api/locations/autocomplete?q=${encodeURIComponent(
+          `${baseUrl}/api/locations/autocomplete?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
@@ -285,7 +286,7 @@ const EditProperty: React.FC = () => {
         form.append("existingImages", JSON.stringify(formData.existingImages));
       }
 
-      const res = await fetch(`http://localhost:3000/api/properties/${id}`, {
+      const res = await fetch(`${baseUrl}/api/properties/${id}`, {
         method: "PUT",
         body: form,
       });

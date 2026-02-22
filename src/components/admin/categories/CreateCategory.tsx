@@ -1,6 +1,7 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import router from "next/router";
+import { baseUrl } from "@/pages/api/rest_api";
 
 const CreateCategoryForm = () => {
   const [name, setName] = useState("");
@@ -13,7 +14,7 @@ const CreateCategoryForm = () => {
     setSuccess("");
 
     try {
-      const res = await axios.post("http://localhost:3000/api/categories/", {
+      const res = await axios.post(`${baseUrl}/api/categories/`, {
         name,
       });
 

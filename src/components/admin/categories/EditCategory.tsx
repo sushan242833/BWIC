@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
+import { baseUrl } from "@/pages/api/rest_api";
 
 const EditCategory = () => {
   const [name, setName] = useState("");
@@ -22,7 +23,7 @@ const EditCategory = () => {
 
   const fetchCategory = async () => {
     try {
-      const res = await axios.get(`http://localhost:3000/api/categories/${id}`);
+      const res = await axios.get<{ name: string }>(`${baseUrl}/api/categories/${id}`);
       setName(res.data.name);
     } catch (err: any) {
       setError("Failed to load category data");
@@ -38,7 +39,7 @@ const EditCategory = () => {
 
     try {
       const res = await axios.put(
-        `http://localhost:3000/api/categories/${id}`,
+        `${baseUrl}/api/categories/${id}`,
         {
           name,
         }

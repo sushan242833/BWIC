@@ -298,7 +298,7 @@ const PropertyDetail = () => {
                         }`}
                       >
                         <img
-                          src={`http://localhost:3000/${img}`}
+                          src={`${baseUrl}/${img}`}
                           alt={`View ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />

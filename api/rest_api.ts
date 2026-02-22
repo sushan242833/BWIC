@@ -2,7 +2,9 @@ import axios, { AxiosError } from "axios";
 
 // Create the Axios instance
 const API = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL:
+    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000",
 });
 
 // GET request
