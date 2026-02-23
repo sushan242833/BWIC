@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { baseUrl } from "@/pages/api/rest_api";
+import {
+  getAdminAuthHeaders,
+  handleUnauthorizedStatus,
+} from "@/utils/adminAuth";
 
 interface Category {
   id: number;
@@ -233,9 +237,13 @@ const AddProperty: React.FC = () => {
 
       const res = await fetch(`${baseUrl}/api/properties`, {
         method: "POST",
+        headers: {
+          ...getAdminAuthHeaders(),
+        },
         body: form,
       });
 
+      if (handleUnauthorizedStatus(res.status)) return;
       if (!res.ok) throw new Error("Failed to create property");
       const data = await res.json();
 

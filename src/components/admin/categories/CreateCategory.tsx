@@ -2,6 +2,7 @@ import { useState, FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import router from "next/router";
 import { baseUrl } from "@/pages/api/rest_api";
+import { getAdminAuthHeaders, handleUnauthorizedStatus } from "@/utils/adminAuth";
 
 const CreateCategoryForm = () => {
   const [name, setName] = useState("");
@@ -14,9 +15,17 @@ const CreateCategoryForm = () => {
     setSuccess("");
 
     try {
-      const res = await axios.post(`${baseUrl}/api/categories/`, {
-        name,
-      });
+      const res = await axios.post(
+        `${baseUrl}/api/categories/`,
+        {
+          name,
+        },
+        {
+          headers: {
+            ...getAdminAuthHeaders(),
+          },
+        },
+      );
 
       if (res.status === 201) {
         setSuccess("Category created successfully!");
@@ -26,6 +35,7 @@ const CreateCategoryForm = () => {
         setName("");
       }
     } catch (err: any) {
+      if (handleUnauthorizedStatus(err?.response?.status)) return;
       setError(err.response?.data?.message || "Failed to create category");
     }
   };

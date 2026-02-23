@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { baseUrl } from "@/pages/api/rest_api";
+import {
+  getAdminAuthHeaders,
+  handleUnauthorizedStatus,
+} from "@/utils/adminAuth";
 
 interface Category {
   id: number;
@@ -288,9 +292,13 @@ const EditProperty: React.FC = () => {
 
       const res = await fetch(`${baseUrl}/api/properties/${id}`, {
         method: "PUT",
+        headers: {
+          ...getAdminAuthHeaders(),
+        },
         body: form,
       });
 
+      if (handleUnauthorizedStatus(res.status)) return;
       if (!res.ok) throw new Error("Failed to update property");
 
       alert("Property updated successfully!");

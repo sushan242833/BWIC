@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
 import { baseUrl } from "@/pages/api/rest_api";
+import { getAdminAuthHeaders, handleUnauthorizedStatus } from "@/utils/adminAuth";
 
 const EditCategory = () => {
   const [name, setName] = useState("");
@@ -42,7 +43,12 @@ const EditCategory = () => {
         `${baseUrl}/api/categories/${id}`,
         {
           name,
-        }
+        },
+        {
+          headers: {
+            ...getAdminAuthHeaders(),
+          },
+        },
       );
 
       if (res.status === 200) {
@@ -52,6 +58,7 @@ const EditCategory = () => {
         }, 1000);
       }
     } catch (err: any) {
+      if (handleUnauthorizedStatus(err?.response?.status)) return;
       setError(err.response?.data?.message || "Failed to update category");
     }
   };

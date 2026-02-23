@@ -10,6 +10,7 @@ import {
   faLayerGroup,
   faHouse,
 } from "@fortawesome/free-solid-svg-icons";
+import { clearAdminToken } from "@/utils/adminAuth";
 
 interface SidebarItem {
   name: string;
@@ -47,6 +48,11 @@ export default function AdminLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+
+  const handleLogout = () => {
+    clearAdminToken();
+    router.push("/admin/login");
+  };
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -125,7 +131,7 @@ export default function AdminLayout({
 
           <div className="relative flex items-center gap-3 pr-8">
             <button
-              onClick={() => router.push("/")}
+              onClick={handleLogout}
               className="flex items-center gap-2 focus:outline-none cursor-pointer"
             >
               <FontAwesomeIcon

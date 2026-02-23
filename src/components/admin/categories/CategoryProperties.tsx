@@ -4,6 +4,10 @@ import React, { useEffect, useState } from "react";
 import Table from "@/components/admin/Table"; // adjust if needed
 import { useRouter } from "next/router";
 import { baseUrl } from "@/pages/api/rest_api";
+import {
+  getAdminAuthHeaders,
+  handleUnauthorizedStatus,
+} from "@/utils/adminAuth";
 
 interface Property {
   id: number;
@@ -92,7 +96,11 @@ export default function CategoryPropertiesPage() {
     try {
       const res = await fetch(`${baseUrl}/api/properties/${row.id}`, {
         method: "DELETE",
+        headers: {
+          ...getAdminAuthHeaders(),
+        },
       });
+      if (handleUnauthorizedStatus(res.status)) return;
       if (!res.ok) throw new Error("Failed to delete property");
       alert("Property deleted successfully");
       fetchCategoryProperties(); // refresh list

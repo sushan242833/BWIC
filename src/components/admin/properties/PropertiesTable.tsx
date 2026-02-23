@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
 import { baseUrl } from "@/pages/api/rest_api";
+import {
+  getAdminAuthHeaders,
+  handleUnauthorizedStatus,
+} from "@/utils/adminAuth";
 
 interface Category {
   id: number;
@@ -110,8 +114,12 @@ export default function PropertyTable() {
         `${baseUrl}/api/properties/${row.id}`,
         {
           method: "DELETE",
+          headers: {
+            ...getAdminAuthHeaders(),
+          },
         },
       );
+      if (handleUnauthorizedStatus(res.status)) return;
       if (!res.ok) throw new Error("Failed to delete property");
       alert("Property deleted successfully");
       router.reload();

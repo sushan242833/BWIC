@@ -36,8 +36,18 @@ export async function getProperties(params?: GetPropertiesParams) {
 }
 
 export async function deleteProperty(id: number) {
+  const headers: Record<string, string> = {};
+
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("bwic_admin_token");
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
   const res = await fetch(`${baseUrl}/api/properties/${id}`, {
     method: "DELETE",
+    headers,
   });
 
   if (!res.ok) {
