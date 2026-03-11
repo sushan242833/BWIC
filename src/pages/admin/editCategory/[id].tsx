@@ -1,12 +1,6 @@
-import EditCategory from "@/components/admin/categories/EditCategory";
+import EditCategoryForm from "@/modules/categories/components/EditCategoryForm";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <EditCategory />
-    </>
-  );
-};
+const EditCategoryPage = () => <EditCategoryForm />;
 
-export default index;
+export default EditCategoryPage;

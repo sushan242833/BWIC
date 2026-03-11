@@ -1,12 +1,6 @@
-import CategoryPropertiesPage from "@/components/admin/categories/CategoryProperties";
+import CategoryPropertiesPage from "@/modules/categories/components/CategoryPropertiesPage";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <CategoryPropertiesPage />
-    </>
-  );
-};
+const CategoryPropertiesRoute = () => <CategoryPropertiesPage />;
 
-export default index;
+export default CategoryPropertiesRoute;

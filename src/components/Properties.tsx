@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { getProperties } from "@/pages/api/rest_api";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
-import { apiFetch, assetUrl, getJson } from "@/lib/api";
+import { apiFetch, assetUrl, getJson } from "@/lib/api/client";
+import { getProperties } from "@/modules/properties/api";
 
 interface Category {
   id: number;

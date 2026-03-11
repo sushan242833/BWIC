@@ -2,32 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { apiFetch, assetUrl, getJson, sendForm } from "@/lib/api";
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface LocationSuggestion {
-  placeId: string;
-  description: string;
-}
-
-interface PropertyFormData {
-  title: string;
-  categoryId: number;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: File[];
-  existingImages?: string[];
-  description: string;
-}
+import { apiFetch, assetUrl, getJson, sendForm } from "@/lib/api/client";
+import type {
+  CategoryOption,
+  LocationSuggestion,
+  Property,
+  PropertyFormData,
+} from "@/modules/properties/types";
 
 const initialFormData: PropertyFormData = {
   title: "",
@@ -44,14 +25,14 @@ const initialFormData: PropertyFormData = {
   description: "",
 };
 
-const EditProperty: React.FC = () => {
+const EditPropertyForm: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
 
   const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
   const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -70,8 +51,8 @@ const EditProperty: React.FC = () => {
     const fetchData = async () => {
       try {
         const [categories, property] = await Promise.all([
-          getJson<Category[]>("/api/categories"),
-          getJson<any>(`/api/properties/${id}`),
+          getJson<CategoryOption[]>("/api/categories"),
+          getJson<Property>(`/api/properties/${id}`),
         ]);
 
         const existing = (property.images || []).map((img: string) =>
@@ -82,6 +63,7 @@ const EditProperty: React.FC = () => {
         setFormData({
           ...initialFormData,
           ...property,
+          images: [],
           existingImages: existing,
         });
         setLocationQuery(property.location || "");
@@ -615,4 +597,4 @@ const EditProperty: React.FC = () => {
   );
 };
 
-export default EditProperty;
+export default EditPropertyForm;

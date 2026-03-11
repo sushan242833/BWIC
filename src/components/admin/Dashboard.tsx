@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getJson } from "@/lib/api";
+import { getJson } from "@/lib/api/client";
 
 interface StatsResponse {
   totalProperties: number;

@@ -1,12 +1,6 @@
-import CategoryTable from "@/components/admin/categories/CategoriesTable";
+import CategoriesTable from "@/modules/categories/components/CategoriesTable";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <CategoryTable />
-    </>
-  );
-};
+const CategoriesAdminPage = () => <CategoriesTable />;
 
-export default index;
+export default CategoriesAdminPage;

@@ -1,12 +1,6 @@
-import CreatePropertyForm from "@/components/CreatePropertyForm";
+import AddPropertyForm from "@/modules/properties/components/AddPropertyForm";
 import React from "react";
 
-const index = () => {
-  return (
-    <div>
-      <CreatePropertyForm />
-    </div>
-  );
-};
+const CreatePropertyPage = () => <AddPropertyForm />;
 
-export default index;
+export default CreatePropertyPage;

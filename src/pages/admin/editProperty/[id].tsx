@@ -1,12 +1,6 @@
-import EditProperty from "@/components/admin/properties/EditProperty";
+import EditPropertyForm from "@/modules/properties/components/EditPropertyForm";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <EditProperty />
-    </>
-  );
-};
+const EditPropertyPage = () => <EditPropertyForm />;
 
-export default index;
+export default EditPropertyPage;

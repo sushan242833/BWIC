@@ -1,12 +1,6 @@
-import PropertyTable from "@/components/admin/properties/PropertiesTable";
+import PropertiesTable from "@/modules/properties/components/PropertiesTable";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <PropertyTable />
-    </>
-  );
-};
+const PropertiesAdminPage = () => <PropertiesTable />;
 
-export default index;
+export default PropertiesAdminPage;

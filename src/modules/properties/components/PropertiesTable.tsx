@@ -1,36 +1,14 @@
 import React, { useEffect, useState } from "react";
-import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
-import { apiFetch, sendJson } from "@/lib/api";
+import Table from "@/components/admin/Table";
+import { apiFetch } from "@/lib/api/client";
+import { deleteProperty } from "@/modules/properties/api";
+import type {
+  PropertiesApiResponse,
+  Property,
+} from "@/modules/properties/types";
 
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface Property {
-  id: number;
-  title: string;
-  categoryId: number;
-  category?: Category;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: string[];
-  description: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface PropertiesApiResponse {
-  data: Property[];
-}
-
-export default function PropertyTable() {
+export default function PropertiesTable() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [searchId, setSearchId] = useState("");
@@ -106,9 +84,7 @@ export default function PropertyTable() {
     );
     if (!confirmDelete) return;
     try {
-      await sendJson(`/api/properties/${row.id}`, {
-        method: "DELETE",
-      });
+      await deleteProperty(row.id);
       alert("Property deleted successfully");
       router.reload();
     } catch (err) {

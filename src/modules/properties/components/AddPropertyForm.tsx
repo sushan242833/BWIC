@@ -1,31 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { apiFetch, getJson, sendForm } from "@/lib/api";
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface LocationSuggestion {
-  placeId: string;
-  description: string;
-}
-
-interface PropertyFormData {
-  title: string;
-  categoryId: number;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: File[];
-  description: string;
-}
+import { apiFetch, sendForm } from "@/lib/api/client";
+import { getCategories } from "@/modules/categories/api";
+import type {
+  CategoryOption,
+  LocationSuggestion,
+  PropertyFormData,
+} from "@/modules/properties/types";
 
 const initialFormData: PropertyFormData = {
   title: "",
@@ -41,11 +23,11 @@ const initialFormData: PropertyFormData = {
   description: "",
 };
 
-const AddProperty: React.FC = () => {
+const AddPropertyForm: React.FC = () => {
   const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
   const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
@@ -58,7 +40,7 @@ const AddProperty: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await getJson<Category[]>("/api/categories/");
+        const data = await getCategories();
         setCategories(data);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -577,4 +559,4 @@ const AddProperty: React.FC = () => {
   );
 };
 
-export default AddProperty;
+export default AddPropertyForm;

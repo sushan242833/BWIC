@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { contactInfo } from "@/utils/ContactInformation";
 import { capitalize } from "@/utils/Capitalize";
-import { apiFetch, assetUrl } from "@/lib/api";
+import { apiFetch, assetUrl } from "@/lib/api/client";
 
 interface Property {
   id: number;

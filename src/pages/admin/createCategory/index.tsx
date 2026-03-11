@@ -1,12 +1,6 @@
-import CreateCategoryForm from "@/components/admin/categories/CreateCategory";
+import CreateCategoryForm from "@/modules/categories/components/CreateCategoryForm";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <CreateCategoryForm />
-    </>
-  );
-};
+const CreateCategoryPage = () => <CreateCategoryForm />;
 
-export default index;
+export default CreateCategoryPage;

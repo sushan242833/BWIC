@@ -1,6 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import router from "next/router";
-import { sendJson } from "@/lib/api";
+import { createCategory } from "@/modules/categories/api";
 
 const CreateCategoryForm = () => {
   const [name, setName] = useState("");
@@ -13,12 +13,7 @@ const CreateCategoryForm = () => {
     setSuccess("");
 
     try {
-      await sendJson("/api/categories/", {
-        method: "POST",
-        body: {
-          name,
-        },
-      });
+      await createCategory(name);
 
       setSuccess("Category created successfully!");
       setTimeout(() => {

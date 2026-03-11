@@ -1,25 +1,17 @@
 import React, { useEffect, useState } from "react";
-import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
-import { getJson, sendJson } from "@/lib/api";
+import Table from "@/components/admin/Table";
+import { deleteCategory, getCategories } from "@/modules/categories/api";
+import type { Category, CategoryRow } from "@/modules/categories/types";
 
-interface Category {
-  id: number;
-  name: string;
-  properties: any[]; // Assuming properties is an array
-}
-
-export default function CategoryTable() {
-  const [categories, setCategories] = useState<Category[]>([]);
+export default function CategoriesTable() {
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
 
   useEffect(() => {
-    getJson<Category[]>("/api/categories")
+    getCategories()
       .then((data: Category[]) => {
-        // Sort categories by ID (ascending)
         const sorted = data.sort((a, b) => a.id - b.id);
-
-        // Transform data as before
-        const cleaned: any = sorted.map(({ ...rest }) => ({
+        const cleaned = sorted.map(({ ...rest }): CategoryRow => ({
           ...rest,
           properties: `${rest.properties.length}`,
         }));
@@ -29,20 +21,18 @@ export default function CategoryTable() {
       .catch((err) => console.error("Failed to fetch categories:", err));
   }, []);
 
-  const handleRowClick = (row: Category) => {
+  const handleRowClick = (row: CategoryRow) => {
     router.push(`/admin/categories/${row.id}`);
   };
-  const handleEdit = (row: Category) =>
+  const handleEdit = (row: CategoryRow) =>
     router.push(`/admin/editCategory/${row.id}`);
-  const handleDelete = async (row: Category) => {
+  const handleDelete = async (row: CategoryRow) => {
     const confirmDelete = confirm(
       "Are you sure you want to delete this category?"
     );
     if (!confirmDelete) return;
     try {
-      await sendJson(`/api/categories/${row.id}`, {
-        method: "DELETE",
-      });
+      await deleteCategory(row.id);
       alert("Category deleted successfully");
       router.reload();
     } catch (error) {
@@ -62,7 +52,7 @@ export default function CategoryTable() {
           + Add Category
         </button>
       </div>
-      <Table<Category>
+      <Table<CategoryRow>
         data={categories}
         onRowClick={handleRowClick}
         onEdit={handleEdit}

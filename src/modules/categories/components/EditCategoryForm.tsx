@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { getJson, sendJson } from "@/lib/api";
+import { useRouter } from "next/router";
+import { getCategory, updateCategory } from "@/modules/categories/api";
 
 const EditCategory = () => {
   const [name, setName] = useState("");
@@ -11,8 +11,7 @@ const EditCategory = () => {
   const [success, setSuccess] = useState("");
 
   const router = useRouter();
-  const params = useParams();
-  const id = params?.id; // e.g. /admin/categories/[id]/edit
+  const { id } = router.query;
 
   useEffect(() => {
     if (id) {
@@ -22,7 +21,7 @@ const EditCategory = () => {
 
   const fetchCategory = async () => {
     try {
-      const category = await getJson<{ name: string }>(`/api/categories/${id}`);
+      const category = await getCategory(String(id));
       setName(category.name);
     } catch (err: any) {
       setError("Failed to load category data");
@@ -37,12 +36,7 @@ const EditCategory = () => {
     setSuccess("");
 
     try {
-      await sendJson(`/api/categories/${id}`, {
-        method: "PUT",
-        body: {
-          name,
-        },
-      });
+      await updateCategory(String(id), name);
 
       setSuccess("Category updated successfully!");
       setTimeout(() => {

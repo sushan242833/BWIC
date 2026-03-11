@@ -1,33 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Table from "@/components/admin/Table"; // adjust if needed
 import { useRouter } from "next/router";
-import { getJson, sendJson } from "@/lib/api";
-
-interface Property {
-  id: number;
-  title: string;
-  categoryId: number;
-  category?: Category;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: string[];
-  description: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  properties: Property[];
-}
+import Table from "@/components/admin/Table";
+import { getCategory } from "@/modules/categories/api";
+import { deleteProperty } from "@/modules/properties/api";
+import type { Category } from "@/modules/categories/types";
+import type { Property } from "@/modules/properties/types";
 
 interface PropertyRow {
   id: number;
@@ -61,9 +40,8 @@ export default function CategoryPropertiesPage() {
 
   const fetchCategoryProperties = async () => {
     try {
-      const data = await getJson<Category>(`/api/categories/${id}`);
+      const data = await getCategory(String(id));
 
-      // Optionally format or clean data before setting
       const cleanedProperties = (data.properties || []).map(
         ({
           description,
@@ -109,9 +87,7 @@ export default function CategoryPropertiesPage() {
     );
     if (!confirmDelete) return;
     try {
-      await sendJson(`/api/properties/${row.id}`, {
-        method: "DELETE",
-      });
+      await deleteProperty(row.id);
       alert("Property deleted successfully");
       fetchCategoryProperties();
     } catch (err) {

@@ -1,4 +1,4 @@
-import { getJson, sendJson } from "@/lib/api";
+import { getJson, sendJson } from "@/lib/api/client";
 
 export interface GetPropertiesParams {
   location?: string;

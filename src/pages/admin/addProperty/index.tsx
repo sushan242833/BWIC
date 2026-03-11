@@ -1,12 +1,6 @@
-import AddProperty from "@/components/admin/properties/AddProperty";
+import AddPropertyForm from "@/modules/properties/components/AddPropertyForm";
 import React from "react";
 
-const index = () => {
-  return (
-    <>
-      <AddProperty />
-    </>
-  );
-};
+const AddPropertyPage = () => <AddPropertyForm />;
 
-export default index;
+export default AddPropertyPage;

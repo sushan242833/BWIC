@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { contactInfo } from "../utils/ContactInformation";
-import { sendJson } from "@/lib/api";
+import { sendJson } from "@/lib/api/client";
 
 const ContactSection: React.FC = () => {
   const [formData, setFormData] = useState({
