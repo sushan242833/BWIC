@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
+import { apiUrl } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -12,7 +13,7 @@ export default function CategoryTable() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/categories")
+    fetch(apiUrl("/api/categories"))
       .then((res) => res.json())
       .then((data: Category[]) => {
         // Sort categories by ID (ascending)
@@ -41,7 +42,7 @@ export default function CategoryTable() {
     if (!confirmDelete) return;
     try {
       const res = await fetch(
-        `http://localhost:3000/api/categories/${row.id}`,
+        apiUrl(`/api/categories/${row.id}`),
         {
           method: "DELETE",
         }

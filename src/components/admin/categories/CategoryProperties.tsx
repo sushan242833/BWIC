@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "@/components/admin/Table"; // adjust if needed
 import { useRouter } from "next/router";
-import { baseUrl } from "@/pages/api/rest_api";
+import { apiUrl } from "@/lib/api";
 
 interface Property {
   id: number;
@@ -42,7 +42,7 @@ export default function CategoryPropertiesPage() {
 
   const fetchCategoryProperties = async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/categories/${id}`);
+      const res = await fetch(apiUrl(`/api/categories/${id}`));
       if (!res.ok) throw new Error("Failed to fetch category details");
 
       const data = await res.json();
@@ -90,7 +90,7 @@ export default function CategoryPropertiesPage() {
     );
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`${baseUrl}/api/properties/${row.id}`, {
+      const res = await fetch(apiUrl(`/api/properties/${row.id}`), {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete property");

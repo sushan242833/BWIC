@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { contactInfo } from "@/utils/ContactInformation";
 import { baseUrl } from "@/pages/api/rest_api";
 import { capitalize } from "@/utils/Capitalize";
+import { assetUrl } from "@/lib/api";
 
 interface Property {
   id: number;
@@ -214,7 +215,7 @@ const PropertyDetail = () => {
               {/* Image Viewer with Arrows */}
               <div className="relative h-80 lg:h-96" ref={imageRef}>
                 <img
-                  src={`${baseUrl}/${property.images[selectedImage]}`}
+                  src={assetUrl(property.images[selectedImage])}
                   alt={property.title}
                   className="w-full h-full object-contain rounded-t-lg"
                 />
@@ -298,7 +299,7 @@ const PropertyDetail = () => {
                         }`}
                       >
                         <img
-                          src={`http://localhost:3000/${img}`}
+                          src={assetUrl(img)}
                           alt={`View ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />

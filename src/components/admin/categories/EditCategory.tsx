@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
+import { apiUrl } from "@/lib/api";
 
 const EditCategory = () => {
   const [name, setName] = useState("");
@@ -22,7 +23,7 @@ const EditCategory = () => {
 
   const fetchCategory = async () => {
     try {
-      const res = await axios.get(`http://localhost:3000/api/categories/${id}`);
+      const res = await axios.get(apiUrl(`/api/categories/${id}`));
       setName(res.data.name);
     } catch (err: any) {
       setError("Failed to load category data");
@@ -37,12 +38,9 @@ const EditCategory = () => {
     setSuccess("");
 
     try {
-      const res = await axios.put(
-        `http://localhost:3000/api/categories/${id}`,
-        {
-          name,
-        }
-      );
+      const res = await axios.put(apiUrl(`/api/categories/${id}`), {
+        name,
+      });
 
       if (res.status === 200) {
         setSuccess("Category updated successfully!");

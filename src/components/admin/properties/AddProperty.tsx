@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { apiUrl } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -57,7 +58,7 @@ const AddProperty: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/categories/");
+        const res = await fetch(apiUrl("/api/categories/"));
         if (!res.ok) throw new Error("Failed to fetch categories");
 
         const data = await res.json();
@@ -82,7 +83,7 @@ const AddProperty: React.FC = () => {
       try {
         setLocationLoading(true);
         const res = await fetch(
-          `http://localhost:3000/api/locations/autocomplete?q=${encodeURIComponent(
+          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
@@ -230,7 +231,7 @@ const AddProperty: React.FC = () => {
         form.append("images", file);
       });
 
-      const res = await fetch("http://localhost:3000/api/properties", {
+      const res = await fetch(apiUrl("/api/properties"), {
         method: "POST",
         body: form,
       });

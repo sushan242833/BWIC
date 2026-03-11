@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { apiUrl, assetUrl } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -69,18 +70,17 @@ const EditProperty: React.FC = () => {
     const fetchData = async () => {
       try {
         const [catRes, propRes] = await Promise.all([
-          fetch("http://localhost:3000/api/categories"),
-          fetch(`http://localhost:3000/api/properties/${id}`),
+          fetch(apiUrl("/api/categories")),
+          fetch(apiUrl(`/api/properties/${id}`)),
         ]);
 
         if (!catRes.ok || !propRes.ok) throw new Error("Failed to fetch data");
 
-        const imageBaseUrl = "http://localhost:3000";
         const categories = await catRes.json();
         const property = await propRes.json();
 
         const existing = (property.images || []).map((img: string) =>
-          img.startsWith("http") ? img : `${imageBaseUrl}${img}`
+          assetUrl(img)
         );
 
         setCategories(categories);
@@ -122,7 +122,7 @@ const EditProperty: React.FC = () => {
       try {
         setLocationLoading(true);
         const res = await fetch(
-          `http://localhost:3000/api/locations/autocomplete?q=${encodeURIComponent(
+          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
@@ -285,7 +285,7 @@ const EditProperty: React.FC = () => {
         form.append("existingImages", JSON.stringify(formData.existingImages));
       }
 
-      const res = await fetch(`http://localhost:3000/api/properties/${id}`, {
+      const res = await fetch(apiUrl(`/api/properties/${id}`), {
         method: "PUT",
         body: form,
       });

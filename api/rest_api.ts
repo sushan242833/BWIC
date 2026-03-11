@@ -1,9 +1,33 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
+import { apiBaseUrl } from "@/lib/api";
 
 // Create the Axios instance
 const API = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: apiBaseUrl,
 });
+
+type AxiosLikeError = {
+  message?: string;
+  response?: {
+    data?: unknown;
+  };
+};
+
+const isAxiosLikeError = (error: unknown): error is AxiosLikeError => {
+  return typeof error === "object" && error !== null;
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (isAxiosLikeError(error)) {
+    return error.response?.data || error.message || "Something went wrong!";
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong!";
+};
 
 // GET request
 export const get = async (url: string) => {
@@ -11,10 +35,7 @@ export const get = async (url: string) => {
     const response = await API.get(url);
     return { data: response.data };
   } catch (e) {
-    const err = e as AxiosError;
-    return {
-      error: err.response?.data || err.message || "Something went wrong!",
-    };
+    return { error: getErrorMessage(e) };
   }
 };
 
@@ -24,10 +45,7 @@ export const post = async (url: string, body: any) => {
     const response = await API.post(url, body);
     return { data: response.data };
   } catch (e) {
-    const err = e as AxiosError;
-    return {
-      error: err.response?.data || err.message || "Something went wrong!",
-    };
+    return { error: getErrorMessage(e) };
   }
 };
 // PUT request (for editing/updating data)
@@ -36,10 +54,7 @@ export const put = async (url: string, body: any) => {
     const response = await API.put(url, body);
     return { data: response.data };
   } catch (e) {
-    const err = e as AxiosError;
-    return {
-      error: err.response?.data || err.message || "Something went wrong!",
-    };
+    return { error: getErrorMessage(e) };
   }
 };
 
@@ -49,9 +64,6 @@ export const del = async (url: string) => {
     const response = await API.delete(url);
     return { data: response.data };
   } catch (e) {
-    const err = e as AxiosError;
-    return {
-      error: err.response?.data || err.message || "Something went wrong!",
-    };
+    return { error: getErrorMessage(e) };
   }
 };

@@ -1,4 +1,6 @@
-export const baseUrl = "http://localhost:3000";
+import { apiBaseUrl, apiUrl } from "@/lib/api";
+
+export const baseUrl = apiBaseUrl;
 
 export interface GetPropertiesParams {
   location?: string;
@@ -26,7 +28,7 @@ export async function getProperties(params?: GetPropertiesParams) {
   }
 
   const query = searchParams.toString();
-  const res = await fetch(`${baseUrl}/api/properties${query ? `?${query}` : ""}`);
+  const res = await fetch(apiUrl(`/api/properties${query ? `?${query}` : ""}`));
   if (!res.ok) {
     throw new Error("Failed to fetch properties");
   }
@@ -34,7 +36,7 @@ export async function getProperties(params?: GetPropertiesParams) {
 }
 
 export async function deleteProperty(id: number) {
-  const res = await fetch(`${baseUrl}/api/properties/${id}`, {
+  const res = await fetch(apiUrl(`/api/properties/${id}`), {
     method: "DELETE",
   });
 

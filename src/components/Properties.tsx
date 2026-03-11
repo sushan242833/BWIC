@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { baseUrl, getProperties } from "@/pages/api/rest_api";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
+import { apiUrl, assetUrl } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -105,7 +106,7 @@ const Properties = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${baseUrl}/api/categories`);
+        const res = await fetch(apiUrl("/api/categories"));
         if (!res.ok) throw new Error("Failed to fetch categories");
         const data = await res.json();
         setCategories(Array.isArray(data) ? data : []);
@@ -157,7 +158,7 @@ const Properties = () => {
       try {
         setLocationLoading(true);
         const res = await fetch(
-          `${baseUrl}/api/locations/autocomplete?q=${encodeURIComponent(
+          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
@@ -470,7 +471,7 @@ const Properties = () => {
             >
               {property.images?.length > 0 && (
                 <img
-                  src={`${baseUrl}/${property.images[0]}`}
+                  src={assetUrl(property.images[0])}
                   alt={property.title}
                   className="w-full h-52 object-cover rounded-xl mb-4"
                 />

@@ -93,66 +93,6 @@ const AboutPage: React.FC = () => {
     },
   };
 
-  // Animate numbers when stats come into view
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = parseInt(
-              entry.target.getAttribute("data-index") || "0"
-            );
-            setVisibleStats((prev) => {
-              const newState = [...prev];
-              newState[index] = true;
-              return newState;
-            });
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
-
-    const statElements = document.querySelectorAll(".stat-item");
-    statElements.forEach((el, index) => {
-      el.setAttribute("data-index", index.toString());
-      observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Timeline animation
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = parseInt(
-              entry.target.getAttribute("data-timeline-index") || "0"
-            );
-            setTimeout(() => {
-              setIsTimelineVisible((prev) => {
-                const newState = [...prev];
-                newState[index] = true;
-                return newState;
-              });
-            }, index * 200);
-          }
-        });
-      },
-      { threshold: 0.3 }
-    );
-
-    const timelineElements = document.querySelectorAll(".timeline-item");
-    timelineElements.forEach((el, index) => {
-      el.setAttribute("data-timeline-index", index.toString());
-      observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white">
       {/* Hero Section */}
@@ -300,7 +240,7 @@ const AboutPage: React.FC = () => {
                             {achievement}
                           </p>
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 </div>
