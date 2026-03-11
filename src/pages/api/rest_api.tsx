@@ -1,6 +1,4 @@
-import { apiBaseUrl, apiUrl } from "@/lib/api";
-
-export const baseUrl = apiBaseUrl;
+import { getJson, sendJson } from "@/lib/api";
 
 export interface GetPropertiesParams {
   location?: string;
@@ -21,28 +19,22 @@ export async function getProperties(params?: GetPropertiesParams) {
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && String(value).trim() !== "") {
+      if (
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+      ) {
         searchParams.set(key, String(value));
       }
     });
   }
 
   const query = searchParams.toString();
-  const res = await fetch(apiUrl(`/api/properties${query ? `?${query}` : ""}`));
-  if (!res.ok) {
-    throw new Error("Failed to fetch properties");
-  }
-  return res.json();
+  return getJson(`/api/properties${query ? `?${query}` : ""}`);
 }
 
 export async function deleteProperty(id: number) {
-  const res = await fetch(apiUrl(`/api/properties/${id}`), {
+  return sendJson(`/api/properties/${id}`, {
     method: "DELETE",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to delete properties");
-  }
-
-  return res.json();
 }

@@ -2,9 +2,8 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { contactInfo } from "@/utils/ContactInformation";
-import { baseUrl } from "@/pages/api/rest_api";
 import { capitalize } from "@/utils/Capitalize";
-import { assetUrl } from "@/lib/api";
+import { apiFetch, assetUrl } from "@/lib/api";
 
 interface Property {
   id: number;
@@ -44,7 +43,7 @@ const PropertyDetail = () => {
 
   useEffect(() => {
     if (id) {
-      fetch(`${baseUrl}/api/properties/${id}`)
+      apiFetch(`/api/properties/${id}`)
         .then(async (res) => {
           if (res.status === 404) {
             setProperty(null);

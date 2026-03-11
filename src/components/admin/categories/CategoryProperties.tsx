@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "@/components/admin/Table"; // adjust if needed
 import { useRouter } from "next/router";
-import { apiUrl } from "@/lib/api";
+import { getJson, sendJson } from "@/lib/api";
 
 interface Property {
   id: number;
@@ -29,11 +29,30 @@ interface Category {
   properties: Property[];
 }
 
+interface PropertyRow {
+  id: number;
+  title: string;
+  location: string;
+  price: string;
+  roi: string;
+  status: string;
+  area: string;
+  areaNepali?: string;
+  distanceFromHighway: string;
+  images: string;
+}
+
+interface CategoryState {
+  id: number;
+  name: string;
+  properties: PropertyRow[];
+}
+
 export default function CategoryPropertiesPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const [category, setCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<CategoryState | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +61,7 @@ export default function CategoryPropertiesPage() {
 
   const fetchCategoryProperties = async () => {
     try {
-      const res = await fetch(apiUrl(`/api/categories/${id}`));
-      if (!res.ok) throw new Error("Failed to fetch category details");
-
-      const data = await res.json();
+      const data = await getJson<Category>(`/api/categories/${id}`);
 
       // Optionally format or clean data before setting
       const cleanedProperties = (data.properties || []).map(
@@ -56,14 +72,17 @@ export default function CategoryPropertiesPage() {
           categoryId,
           category,
           ...rest
-        }: Property) => ({
+        }: Property): PropertyRow => ({
           ...rest,
           area: `${rest.area} sq ft`,
-          distanceFromHighway: `${rest.distanceFromHighway}m`,
+          distanceFromHighway:
+            rest.distanceFromHighway !== undefined
+              ? `${rest.distanceFromHighway}m`
+              : "N/A",
           roi: `${rest.roi}%`,
           price: `Nrs. ${rest.price} per aana`,
           images: `${rest.images.length} image(s)`,
-        })
+        }),
       );
 
       setCategory({
@@ -78,24 +97,23 @@ export default function CategoryPropertiesPage() {
     }
   };
 
-  const handleRowClick = (row: Property) =>
+  const handleRowClick = (row: PropertyRow) =>
     console.log("Property clicked:", row);
 
-  const handleEdit = (row: Property) =>
+  const handleEdit = (row: PropertyRow) =>
     router.push(`/admin/editProperty/${row.id}`);
 
-  const handleDelete = async (row: Property) => {
+  const handleDelete = async (row: PropertyRow) => {
     const confirmDelete = confirm(
-      "Are you sure you want to delete this property?"
+      "Are you sure you want to delete this property?",
     );
     if (!confirmDelete) return;
     try {
-      const res = await fetch(apiUrl(`/api/properties/${row.id}`), {
+      await sendJson(`/api/properties/${row.id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete property");
       alert("Property deleted successfully");
-      fetchCategoryProperties(); // refresh list
+      fetchCategoryProperties();
     } catch (err) {
       console.error("Failed to delete property:", err);
       alert("Failed to delete property");
@@ -125,7 +143,7 @@ export default function CategoryPropertiesPage() {
       </div>
 
       {category.properties.length > 0 ? (
-        <Table<Property>
+        <Table<PropertyRow>
           data={category.properties}
           onRowClick={handleRowClick}
           onEdit={handleEdit}

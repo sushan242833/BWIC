@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { contactInfo } from "../utils/ContactInformation";
-import { baseUrl } from "@/pages/api/rest_api";
+import { sendJson } from "@/lib/api";
 
 const ContactSection: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,7 @@ const ContactSection: React.FC = () => {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -55,43 +55,35 @@ const ContactSection: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${baseUrl}/api/contacts`, {
+      await sendJson("/api/contacts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        body: {
           name,
           email,
           phone,
           investmentRange,
           propertyType,
           message,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        alert(
-          `Failed to send message: ${errorData.message || "Unknown error"}`
-        );
-      } else {
-        alert(
-          "Thank you for your inquiry! We'll get back to you within 24 hours."
-        );
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          investmentRange: "",
-          propertyType: "",
-          message: "",
-        });
-      }
-    } catch (error) {
       alert(
-        "An error occurred while sending your message. Please try again later."
+        "Thank you for your inquiry! We'll get back to you within 24 hours.",
       );
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        investmentRange: "",
+        propertyType: "",
+        message: "",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An error occurred while sending your message. Please try again later.";
+      alert(`Failed to send message: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +161,7 @@ const ContactSection: React.FC = () => {
       description: `${contactInfo.address.city}, ${contactInfo.address.country}`,
       action: "Get Directions",
       link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${contactInfo.address.street}, ${contactInfo.address.city}, ${contactInfo.address.country}`
+        `${contactInfo.address.street}, ${contactInfo.address.city}, ${contactInfo.address.country}`,
       )}`,
     },
   ];

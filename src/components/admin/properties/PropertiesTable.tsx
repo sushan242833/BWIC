@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, sendJson } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -41,7 +41,7 @@ export default function PropertyTable() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(apiUrl("/api/properties"));
+      const res = await apiFetch("/api/properties");
 
       // Detect backend offline or invalid HTML response
       const contentType = res.headers.get("content-type") || "";
@@ -106,13 +106,9 @@ export default function PropertyTable() {
     );
     if (!confirmDelete) return;
     try {
-      const res = await fetch(
-        apiUrl(`/api/properties/${row.id}`),
-        {
-          method: "DELETE",
-        },
-      );
-      if (!res.ok) throw new Error("Failed to delete property");
+      await sendJson(`/api/properties/${row.id}`, {
+        method: "DELETE",
+      });
       alert("Property deleted successfully");
       router.reload();
     } catch (err) {

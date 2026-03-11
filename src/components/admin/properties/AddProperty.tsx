@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, getJson, sendForm } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -58,10 +58,7 @@ const AddProperty: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(apiUrl("/api/categories/"));
-        if (!res.ok) throw new Error("Failed to fetch categories");
-
-        const data = await res.json();
+        const data = await getJson<Category[]>("/api/categories/");
         setCategories(data);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -82,8 +79,8 @@ const AddProperty: React.FC = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await fetch(
-          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
+        const res = await apiFetch(
+          `/api/locations/autocomplete?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
@@ -231,13 +228,10 @@ const AddProperty: React.FC = () => {
         form.append("images", file);
       });
 
-      const res = await fetch(apiUrl("/api/properties"), {
+      const data = await sendForm("/api/properties", {
         method: "POST",
         body: form,
       });
-
-      if (!res.ok) throw new Error("Failed to create property");
-      const data = await res.json();
 
       alert("Property submitted successfully!");
       console.log("Created property:", data);

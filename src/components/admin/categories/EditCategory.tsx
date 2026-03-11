@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
-import { apiUrl } from "@/lib/api";
+import { getJson, sendJson } from "@/lib/api";
 
 const EditCategory = () => {
   const [name, setName] = useState("");
@@ -23,8 +22,8 @@ const EditCategory = () => {
 
   const fetchCategory = async () => {
     try {
-      const res = await axios.get(apiUrl(`/api/categories/${id}`));
-      setName(res.data.name);
+      const category = await getJson<{ name: string }>(`/api/categories/${id}`);
+      setName(category.name);
     } catch (err: any) {
       setError("Failed to load category data");
     } finally {
@@ -38,18 +37,21 @@ const EditCategory = () => {
     setSuccess("");
 
     try {
-      const res = await axios.put(apiUrl(`/api/categories/${id}`), {
-        name,
+      await sendJson(`/api/categories/${id}`, {
+        method: "PUT",
+        body: {
+          name,
+        },
       });
 
-      if (res.status === 200) {
-        setSuccess("Category updated successfully!");
-        setTimeout(() => {
-          router.push("/admin/categories");
-        }, 1000);
-      }
+      setSuccess("Category updated successfully!");
+      setTimeout(() => {
+        router.push("/admin/categories");
+      }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to update category");
+      setError(
+        err instanceof Error ? err.message : "Failed to update category",
+      );
     }
   };
 

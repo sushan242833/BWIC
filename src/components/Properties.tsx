@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { baseUrl, getProperties } from "@/pages/api/rest_api";
+import { getProperties } from "@/pages/api/rest_api";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
-import { apiUrl, assetUrl } from "@/lib/api";
+import { apiFetch, assetUrl, getJson } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -106,9 +106,7 @@ const Properties = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(apiUrl("/api/categories"));
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        const data = await res.json();
+        const data = await getJson<Category[]>("/api/categories");
         setCategories(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
@@ -157,8 +155,8 @@ const Properties = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await fetch(
-          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
+        const res = await apiFetch(
+          `/api/locations/autocomplete?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );

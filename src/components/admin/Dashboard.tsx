@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { baseUrl } from "@/pages/api/rest_api";
+import { getJson } from "@/lib/api";
+
+interface StatsResponse {
+  totalProperties: number;
+  totalCategories: number;
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -13,11 +18,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${baseUrl}/api/stats`);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await getJson<StatsResponse>("/api/stats");
         setStats(data);
       } catch (err: any) {
         console.error("Failed to fetch stats:", err);

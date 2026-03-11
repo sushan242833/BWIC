@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { apiUrl, assetUrl } from "@/lib/api";
+import { apiFetch, assetUrl, getJson, sendForm } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -69,18 +69,13 @@ const EditProperty: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const [catRes, propRes] = await Promise.all([
-          fetch(apiUrl("/api/categories")),
-          fetch(apiUrl(`/api/properties/${id}`)),
+        const [categories, property] = await Promise.all([
+          getJson<Category[]>("/api/categories"),
+          getJson<any>(`/api/properties/${id}`),
         ]);
 
-        if (!catRes.ok || !propRes.ok) throw new Error("Failed to fetch data");
-
-        const categories = await catRes.json();
-        const property = await propRes.json();
-
         const existing = (property.images || []).map((img: string) =>
-          assetUrl(img)
+          assetUrl(img),
         );
 
         setCategories(categories);
@@ -121,14 +116,16 @@ const EditProperty: React.FC = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await fetch(
-          `${apiUrl("/api/locations/autocomplete")}?q=${encodeURIComponent(
+        const res = await apiFetch(
+          `/api/locations/autocomplete?q=${encodeURIComponent(
             locationQuery.trim(),
           )}`,
         );
         if (!res.ok) throw new Error("Failed to fetch location suggestions");
         const payload = await res.json();
-        setLocationSuggestions(Array.isArray(payload?.data) ? payload.data : []);
+        setLocationSuggestions(
+          Array.isArray(payload?.data) ? payload.data : [],
+        );
       } catch (error) {
         console.error("Failed to fetch location suggestions:", error);
         setLocationSuggestions([]);
@@ -144,7 +141,7 @@ const EditProperty: React.FC = () => {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -273,7 +270,7 @@ const EditProperty: React.FC = () => {
       if (formData.distanceFromHighway !== undefined)
         form.append(
           "distanceFromHighway",
-          String(formData.distanceFromHighway)
+          String(formData.distanceFromHighway),
         );
       form.append("description", formData.description);
 
@@ -285,12 +282,10 @@ const EditProperty: React.FC = () => {
         form.append("existingImages", JSON.stringify(formData.existingImages));
       }
 
-      const res = await fetch(apiUrl(`/api/properties/${id}`), {
+      await sendForm(`/api/properties/${id}`, {
         method: "PUT",
         body: form,
       });
-
-      if (!res.ok) throw new Error("Failed to update property");
 
       alert("Property updated successfully!");
       router.push("/admin/properties");
@@ -367,7 +362,9 @@ const EditProperty: React.FC = () => {
                 value={locationQuery}
                 onChange={handleLocationQueryChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
-                onBlur={() => setTimeout(() => setIsLocationDropdownOpen(false), 150)}
+                onBlur={() =>
+                  setTimeout(() => setIsLocationDropdownOpen(false), 150)
+                }
                 placeholder="Search location..."
                 className="w-full border rounded px-3 py-2"
               />

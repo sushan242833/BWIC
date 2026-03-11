@@ -1,7 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from "react";
-import axios from "axios";
 import router from "next/router";
-import { apiUrl } from "@/lib/api";
+import { sendJson } from "@/lib/api";
 
 const CreateCategoryForm = () => {
   const [name, setName] = useState("");
@@ -14,19 +13,22 @@ const CreateCategoryForm = () => {
     setSuccess("");
 
     try {
-      const res = await axios.post(apiUrl("/api/categories/"), {
-        name,
+      await sendJson("/api/categories/", {
+        method: "POST",
+        body: {
+          name,
+        },
       });
 
-      if (res.status === 201) {
-        setSuccess("Category created successfully!");
-        setTimeout(() => {
-          router.push("/admin/categories");
-        }, 1000);
-        setName("");
-      }
+      setSuccess("Category created successfully!");
+      setTimeout(() => {
+        router.push("/admin/categories");
+      }, 1000);
+      setName("");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to create category");
+      setError(
+        err instanceof Error ? err.message : "Failed to create category",
+      );
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Table from "../Table"; // Adjust path as needed
 import router from "next/router";
-import { apiUrl } from "@/lib/api";
+import { getJson, sendJson } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -13,8 +13,7 @@ export default function CategoryTable() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    fetch(apiUrl("/api/categories"))
-      .then((res) => res.json())
+    getJson<Category[]>("/api/categories")
       .then((data: Category[]) => {
         // Sort categories by ID (ascending)
         const sorted = data.sort((a, b) => a.id - b.id);
@@ -41,15 +40,9 @@ export default function CategoryTable() {
     );
     if (!confirmDelete) return;
     try {
-      const res = await fetch(
-        apiUrl(`/api/categories/${row.id}`),
-        {
-          method: "DELETE",
-        }
-      );
-      if (!res.ok) {
-        throw new Error("Failed to delete category");
-      }
+      await sendJson(`/api/categories/${row.id}`, {
+        method: "DELETE",
+      });
       alert("Category deleted successfully");
       router.reload();
     } catch (error) {
