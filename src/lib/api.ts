@@ -1,9 +1,13 @@
-const normalizeBaseUrl = (value: string | undefined): string => {
-  const fallback = "http://localhost:4000";
-  return (value || fallback).replace(/\/+$/, "");
-};
+const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(
+  /\/+$/,
+  "",
+);
 
-export const apiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
+if (!apiBaseUrl) {
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
+}
+
+export { apiBaseUrl };
 
 export const apiUrl = (path: string): string => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
