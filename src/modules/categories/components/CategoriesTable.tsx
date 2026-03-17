@@ -10,11 +10,15 @@ export default function CategoriesTable() {
   useEffect(() => {
     getCategories()
       .then((data: Category[]) => {
-        const sorted = data.sort((a, b) => a.id - b.id);
-        const cleaned = sorted.map(({ ...rest }): CategoryRow => ({
-          ...rest,
-          properties: `${rest.properties.length}`,
-        }));
+        const sorted = [...(Array.isArray(data) ? data : [])].sort(
+          (a, b) => a.id - b.id,
+        );
+        const cleaned = sorted.map(
+          ({ ...rest }): CategoryRow => ({
+            ...rest,
+            properties: `${rest.properties.length}`,
+          }),
+        );
 
         setCategories(cleaned);
       })
@@ -28,7 +32,7 @@ export default function CategoriesTable() {
     router.push(`/admin/editCategory/${row.id}`);
   const handleDelete = async (row: CategoryRow) => {
     const confirmDelete = confirm(
-      "Are you sure you want to delete this category?"
+      "Are you sure you want to delete this category?",
     );
     if (!confirmDelete) return;
     try {

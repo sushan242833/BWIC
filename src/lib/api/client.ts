@@ -1,5 +1,19 @@
 import { apiBaseUrl } from "@/lib/config";
 
+type ApiSuccessResponse<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+};
+
 export const apiUrl = (path: string): string => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${apiBaseUrl}${normalizedPath}`;
@@ -38,6 +52,14 @@ export const getJson = async <T>(
   }
 
   return response.json() as Promise<T>;
+};
+
+export const getApiData = async <T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> => {
+  const payload = await getJson<ApiSuccessResponse<T>>(path, init);
+  return payload.data;
 };
 
 export const sendJson = async <T>(

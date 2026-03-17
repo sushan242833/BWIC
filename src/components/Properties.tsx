@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
-import { apiFetch, assetUrl, getJson } from "@/lib/api/client";
+import { apiFetch, assetUrl, getApiData } from "@/lib/api/client";
 import { getProperties } from "@/modules/properties/api";
 
 interface Category {
@@ -106,7 +106,7 @@ const Properties = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await getJson<Category[]>("/api/categories");
+        const data = await getApiData<Category[]>("/api/categories");
         setCategories(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch categories:", err);

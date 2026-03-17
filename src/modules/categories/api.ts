@@ -1,10 +1,10 @@
-import { getJson, sendJson } from "@/lib/api/client";
+import { getApiData, sendJson } from "@/lib/api/client";
 import type { Category } from "@/modules/categories/types";
 
-export const getCategories = () => getJson<Category[]>("/api/categories");
+export const getCategories = () => getApiData<Category[]>("/api/categories");
 
 export const getCategory = (id: string | number) =>
-  getJson<Category>(`/api/categories/${id}`);
+  getApiData<Category>(`/api/categories/${id}`);
 
 export const createCategory = (name: string) =>
   sendJson("/api/categories/", {

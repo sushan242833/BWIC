@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { apiFetch, assetUrl, getJson, sendForm } from "@/lib/api/client";
+import { apiFetch, assetUrl, getApiData, sendForm } from "@/lib/api/client";
 import type {
   CategoryOption,
   LocationSuggestion,
@@ -51,8 +51,8 @@ const EditPropertyForm: React.FC = () => {
     const fetchData = async () => {
       try {
         const [categories, property] = await Promise.all([
-          getJson<CategoryOption[]>("/api/categories"),
-          getJson<Property>(`/api/properties/${id}`),
+          getApiData<CategoryOption[]>("/api/categories"),
+          getApiData<Property>(`/api/properties/${id}`),
         ]);
 
         const existing = (property.images || []).map((img: string) =>

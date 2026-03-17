@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { contactInfo } from "@/utils/ContactInformation";
 import { capitalize } from "@/utils/Capitalize";
-import { apiFetch, assetUrl } from "@/lib/api/client";
+import { assetUrl, getApiData } from "@/lib/api/client";
 
 interface Property {
   id: number;
@@ -43,22 +43,15 @@ const PropertyDetail = () => {
 
   useEffect(() => {
     if (id) {
-      apiFetch(`/api/properties/${id}`)
-        .then(async (res) => {
-          if (res.status === 404) {
-            setProperty(null);
-            setLoading(false);
-            return;
-          }
-          if (!res.ok) {
-            throw new Error("Failed to fetch");
-          }
-          const data = await res.json();
+      getApiData<Property>(`/api/properties/${id}`)
+        .then((data) => {
           setProperty(data);
+          setSelectedImage(0);
           setLoading(false);
         })
         .catch((err) => {
           console.error("Failed to fetch property", err);
+          setProperty(null);
           setLoading(false);
         });
     }
@@ -131,8 +124,8 @@ const PropertyDetail = () => {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusColor = (status?: string) => {
+    switch ((status || "").toLowerCase()) {
       case "available":
         return "bg-green-100 text-green-800";
       case "sold":
@@ -199,10 +192,10 @@ const PropertyDetail = () => {
             <div className="flex items-center">
               <span
                 className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(
-                  property.status
+                  property.status,
                 )}`}
               >
-                {property.status}
+                {property.status || "Unknown"}
               </span>
             </div>
           </div>
