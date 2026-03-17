@@ -1,13 +1,8 @@
-import type { Property } from "@/modules/properties/types";
-
-export interface Category {
+export interface CategorySummary {
   id: number;
   name: string;
-  properties: Property[];
+  propertyCount: number;
 }
 
-export interface CategoryRow {
-  id: number;
-  name: string;
-  properties: string;
-}
+export type CategoryDetail = CategorySummary;
+export type Category = CategorySummary;

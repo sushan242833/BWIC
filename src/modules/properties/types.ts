@@ -1,6 +1,7 @@
 export interface CategoryOption {
   id: number;
   name: string;
+  propertyCount?: number;
 }
 
 export interface LocationSuggestion {
@@ -8,11 +9,11 @@ export interface LocationSuggestion {
   description: string;
 }
 
-export interface Property {
+export interface PropertySummary {
   id: number;
   title: string;
   categoryId: number;
-  category?: CategoryOption;
+  category: CategoryOption | null;
   location: string;
   price: string;
   priceNpr?: number;
@@ -24,10 +25,18 @@ export interface Property {
   areaNepali?: string;
   distanceFromHighway?: number;
   images: string[];
+  primaryImage?: string;
   description: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface PropertyDetail extends PropertySummary {
+  latitude?: number;
+  longitude?: number;
+}
+
+export type Property = PropertySummary;
 
 export interface PropertyFormData {
   title: string;
@@ -45,7 +54,7 @@ export interface PropertyFormData {
 }
 
 export interface PropertiesResponse {
-  data: Property[];
+  data: PropertySummary[];
   pagination: {
     page: number;
     limit: number;
@@ -57,5 +66,6 @@ export interface PropertiesResponse {
 }
 
 export interface PropertiesApiResponse {
-  data: Property[];
+  data: PropertySummary[];
+  pagination?: PropertiesResponse["pagination"];
 }

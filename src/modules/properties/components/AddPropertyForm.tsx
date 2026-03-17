@@ -1,27 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { apiFetch, sendForm } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
+import { createProperty } from "@/modules/properties/api";
+import { createEmptyPropertyFormData } from "@/modules/properties/form-data";
 import type {
   CategoryOption,
   LocationSuggestion,
   PropertyFormData,
 } from "@/modules/properties/types";
 
-const initialFormData: PropertyFormData = {
-  title: "",
-  categoryId: 0,
-  location: "",
-  price: "",
-  roi: "",
-  status: "",
-  area: "",
-  areaNepali: "",
-  distanceFromHighway: undefined,
-  images: [],
-  description: "",
-};
+const initialFormData = createEmptyPropertyFormData();
 
 const AddPropertyForm: React.FC = () => {
   const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
@@ -190,30 +180,7 @@ const AddPropertyForm: React.FC = () => {
     if (!validate()) return;
 
     try {
-      const form = new FormData();
-      form.append("title", formData.title);
-      form.append("categoryId", String(formData.categoryId));
-      form.append("location", formData.location);
-      form.append("price", formData.price);
-      form.append("roi", formData.roi);
-      form.append("status", formData.status);
-      form.append("area", formData.area);
-      if (formData.areaNepali) form.append("areaNepali", formData.areaNepali);
-      if (formData.distanceFromHighway !== undefined)
-        form.append(
-          "distanceFromHighway",
-          String(formData.distanceFromHighway)
-        );
-      form.append("description", formData.description);
-
-      formData.images.forEach((file) => {
-        form.append("images", file);
-      });
-
-      const data = await sendForm("/api/properties", {
-        method: "POST",
-        body: form,
-      });
+      const data = await createProperty(formData);
 
       alert("Property submitted successfully!");
       console.log("Created property:", data);

@@ -2,21 +2,27 @@ import React, { useEffect, useState } from "react";
 import router from "next/router";
 import Table from "@/components/admin/Table";
 import { deleteCategory, getCategories } from "@/modules/categories/api";
-import type { Category, CategoryRow } from "@/modules/categories/types";
+import type { CategorySummary } from "@/modules/categories/types";
+
+interface CategoryRow {
+  id: number;
+  name: string;
+  propertyCount: string;
+}
 
 export default function CategoriesTable() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
 
   useEffect(() => {
     getCategories()
-      .then((data: Category[]) => {
+      .then((data: CategorySummary[]) => {
         const sorted = [...(Array.isArray(data) ? data : [])].sort(
           (a, b) => a.id - b.id,
         );
         const cleaned = sorted.map(
           ({ ...rest }): CategoryRow => ({
             ...rest,
-            properties: `${rest.properties.length}`,
+            propertyCount: `${rest.propertyCount}`,
           }),
         );
 

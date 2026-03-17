@@ -2,74 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
-import { apiFetch, assetUrl, getApiData } from "@/lib/api/client";
+import { apiFetch, assetUrl } from "@/lib/api/client";
+import { getCategories } from "@/modules/categories/api";
 import { getProperties } from "@/modules/properties/api";
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface LocationSuggestion {
-  placeId: string;
-  description: string;
-}
-
-interface Property {
-  id: number;
-  title: string;
-  categoryId: number;
-  location: string;
-  price: string;
-  priceNpr?: number;
-  roi: string;
-  roiPercent?: number;
-  status: string;
-  area: string;
-  areaSqft?: number;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: string[];
-  description: string;
-  category: {
-    id?: number;
-    name: string;
-  };
-}
-
-interface PropertiesResponse {
-  data: Property[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
-
-interface FilterState {
-  location: string;
-  categoryId: string;
-  minPrice: string;
-  maxPrice: string;
-  minRoi: string;
-  minArea: string;
-  maxDistanceFromHighway: string;
-  status: string;
-}
-
-const defaultFilters: FilterState = {
-  location: "",
-  categoryId: "",
-  minPrice: "",
-  maxPrice: "",
-  minRoi: "",
-  minArea: "",
-  maxDistanceFromHighway: "",
-  status: "",
-};
+import {
+  countActivePropertyFilters,
+  defaultPropertyFilters,
+  defaultPropertySort,
+  PROPERTY_SORT_OPTIONS,
+  PROPERTY_STATUS_OPTIONS,
+  PropertyFilters,
+  PropertySortValue,
+} from "@/modules/properties/filters";
+import type {
+  LocationSuggestion,
+  PropertySummary,
+  PropertiesResponse,
+} from "@/modules/properties/types";
+import type { CategorySummary } from "@/modules/categories/types";
 
 const defaultPagination = {
   page: 1,
@@ -84,13 +34,13 @@ const Properties = () => {
   const router = useRouter();
   const propertyListRef = useRef<HTMLDivElement>(null);
 
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(defaultFilters);
-  const [sort, setSort] = useState<"price_asc" | "price_desc" | "roi_desc" | "newest">(
-    "newest"
+  const [properties, setProperties] = useState<PropertySummary[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
+  const [filters, setFilters] = useState<PropertyFilters>(defaultPropertyFilters);
+  const [appliedFilters, setAppliedFilters] = useState<PropertyFilters>(
+    defaultPropertyFilters,
   );
+  const [sort, setSort] = useState<PropertySortValue>(defaultPropertySort);
   const [pagination, setPagination] = useState(defaultPagination);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -106,7 +56,7 @@ const Properties = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await getApiData<Category[]>("/api/categories");
+        const data = await getCategories();
         setCategories(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
@@ -207,9 +157,9 @@ const Properties = () => {
   };
 
   const clearFilters = () => {
-    setFilters(defaultFilters);
-    setAppliedFilters(defaultFilters);
-    setSort("newest");
+    setFilters(defaultPropertyFilters);
+    setAppliedFilters(defaultPropertyFilters);
+    setSort(defaultPropertySort);
     setLocationQuery("");
     setLocationSuggestions([]);
     setSelectedLocationPlaceId("");
@@ -241,7 +191,7 @@ const Properties = () => {
   };
 
   const activeFilterCount = useMemo(() => {
-    return Object.values(appliedFilters).filter((value) => value !== "").length;
+    return countActivePropertyFilters(appliedFilters);
   }, [appliedFilters]);
 
   return (
@@ -383,10 +333,11 @@ const Properties = () => {
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
             >
-              <option value="">All Status</option>
-              <option value="available">Available</option>
-              <option value="pending">Pending</option>
-              <option value="sold">Sold</option>
+              {PROPERTY_STATUS_OPTIONS.map((option) => (
+                <option key={option.label} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -394,17 +345,14 @@ const Properties = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <select
                 value={sort}
-                onChange={(e) =>
-                  setSort(
-                    e.target.value as "price_asc" | "price_desc" | "roi_desc" | "newest"
-                  )
-                }
+                onChange={(e) => setSort(e.target.value as PropertySortValue)}
                 className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
               >
-                <option value="newest">Newest</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="roi_desc">ROI: High to Low</option>
+                {PROPERTY_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
               <select

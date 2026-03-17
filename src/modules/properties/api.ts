@@ -1,37 +1,36 @@
-import { getJson, sendJson } from "@/lib/api/client";
+import { getApiData, getJson, sendForm, sendJson } from "@/lib/api/client";
+import {
+  buildPropertySearchParams,
+  PropertyFilterQuery,
+} from "@/modules/properties/filters";
+import { buildPropertyFormPayload } from "@/modules/properties/form-data";
+import type {
+  PropertiesResponse,
+  PropertyDetail,
+  PropertyFormData,
+} from "@/modules/properties/types";
 
-export interface GetPropertiesParams {
-  location?: string;
-  categoryId?: string | number;
-  minPrice?: string | number;
-  maxPrice?: string | number;
-  minRoi?: string | number;
-  minArea?: string | number;
-  maxDistanceFromHighway?: string | number;
-  status?: string;
-  sort?: "price_asc" | "price_desc" | "roi_desc" | "newest";
-  page?: number;
-  limit?: number;
-}
-
-export async function getProperties(params?: GetPropertiesParams) {
-  const searchParams = new URLSearchParams();
-
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (
-        value !== undefined &&
-        value !== null &&
-        String(value).trim() !== ""
-      ) {
-        searchParams.set(key, String(value));
-      }
-    });
-  }
-
-  const query = searchParams.toString();
+export async function getProperties(
+  params?: PropertyFilterQuery,
+): Promise<PropertiesResponse> {
+  const query = buildPropertySearchParams(params).toString();
   return getJson(`/api/properties${query ? `?${query}` : ""}`);
 }
+
+export const getProperty = (id: string | number) =>
+  getApiData<PropertyDetail>(`/api/properties/${id}`);
+
+export const createProperty = (data: PropertyFormData) =>
+  sendForm("/api/properties", {
+    method: "POST",
+    body: buildPropertyFormPayload(data),
+  });
+
+export const updateProperty = (id: string | number, data: PropertyFormData) =>
+  sendForm(`/api/properties/${id}`, {
+    method: "PUT",
+    body: buildPropertyFormPayload(data),
+  });
 
 export async function deleteProperty(id: number) {
   return sendJson(`/api/properties/${id}`, {

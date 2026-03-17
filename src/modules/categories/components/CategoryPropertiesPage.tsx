@@ -4,27 +4,15 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Table from "@/components/admin/Table";
 import { getCategory } from "@/modules/categories/api";
-import { deleteProperty } from "@/modules/properties/api";
-import type { Category } from "@/modules/categories/types";
-import type { Property } from "@/modules/properties/types";
+import { deleteProperty, getProperties } from "@/modules/properties/api";
+import {
+  formatPropertyTableRows,
+  PropertyTableRow,
+} from "@/modules/properties/table-rows";
+import type { CategoryDetail } from "@/modules/categories/types";
 
-interface PropertyRow {
-  id: number;
-  title: string;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway: string;
-  images: string;
-}
-
-interface CategoryState {
-  id: number;
-  name: string;
-  properties: PropertyRow[];
+interface CategoryState extends CategoryDetail {
+  properties: PropertyTableRow[];
 }
 
 export default function CategoryPropertiesPage() {
@@ -40,32 +28,15 @@ export default function CategoryPropertiesPage() {
 
   const fetchCategoryProperties = async () => {
     try {
-      const data = await getCategory(String(id));
+      const [data, propertiesPayload] = await Promise.all([
+        getCategory(String(id)),
+        getProperties({ categoryId: String(id) }),
+      ]);
 
-      const cleanedProperties = (data.properties || []).map(
-        ({
-          description,
-          createdAt,
-          updatedAt,
-          categoryId,
-          category,
-          ...rest
-        }: Property): PropertyRow => ({
-          ...rest,
-          area: `${rest.area} sq ft`,
-          distanceFromHighway:
-            rest.distanceFromHighway !== undefined
-              ? `${rest.distanceFromHighway}m`
-              : "N/A",
-          roi: `${rest.roi}%`,
-          price: `Nrs. ${rest.price} per aana`,
-          images: `${rest.images.length} image(s)`,
-        }),
-      );
+      const cleanedProperties = formatPropertyTableRows(propertiesPayload.data ?? []);
 
       setCategory({
-        id: data.id,
-        name: data.name,
+        ...data,
         properties: cleanedProperties,
       });
     } catch (err) {
@@ -75,13 +46,13 @@ export default function CategoryPropertiesPage() {
     }
   };
 
-  const handleRowClick = (row: PropertyRow) =>
+  const handleRowClick = (row: PropertyTableRow) =>
     console.log("Property clicked:", row);
 
-  const handleEdit = (row: PropertyRow) =>
+  const handleEdit = (row: PropertyTableRow) =>
     router.push(`/admin/editProperty/${row.id}`);
 
-  const handleDelete = async (row: PropertyRow) => {
+  const handleDelete = async (row: PropertyTableRow) => {
     const confirmDelete = confirm(
       "Are you sure you want to delete this property?",
     );
@@ -119,7 +90,7 @@ export default function CategoryPropertiesPage() {
       </div>
 
       {category.properties.length > 0 ? (
-        <Table<PropertyRow>
+        <Table<PropertyTableRow>
           data={category.properties}
           onRowClick={handleRowClick}
           onEdit={handleEdit}

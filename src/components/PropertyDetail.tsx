@@ -3,30 +3,14 @@ import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { contactInfo } from "@/utils/ContactInformation";
 import { capitalize } from "@/utils/Capitalize";
-import { assetUrl, getApiData } from "@/lib/api/client";
-
-interface Property {
-  id: number;
-  title: string;
-  categoryId: number;
-  location: string;
-  price: string;
-  roi: string;
-  status: string;
-  area: string;
-  areaNepali?: string;
-  distanceFromHighway?: number;
-  images: string[];
-  description: string;
-  category: {
-    name: string;
-  };
-}
+import { assetUrl } from "@/lib/api/client";
+import { getProperty } from "@/modules/properties/api";
+import type { PropertyDetail as PropertyDetailType } from "@/modules/properties/types";
 
 const PropertyDetail = () => {
   const router = useRouter();
   const { id } = router.query;
-  const [property, setProperty] = useState<Property | null>(null);
+  const [property, setProperty] = useState<PropertyDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const imageRef = useRef<HTMLDivElement | null>(null);
@@ -43,7 +27,7 @@ const PropertyDetail = () => {
 
   useEffect(() => {
     if (id) {
-      getApiData<Property>(`/api/properties/${id}`)
+      getProperty(String(id))
         .then((data) => {
           setProperty(data);
           setSelectedImage(0);
@@ -404,7 +388,7 @@ const PropertyDetail = () => {
                     Category
                   </span>
                   <span className="font-semibold text-gray-900">
-                    {capitalize(property.category?.name)}
+                    {capitalize(property.category?.name || "uncategorized")}
                   </span>
                 </div>
 

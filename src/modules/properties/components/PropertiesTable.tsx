@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 import router from "next/router";
 import Table from "@/components/admin/Table";
-import { apiFetch } from "@/lib/api/client";
-import { deleteProperty } from "@/modules/properties/api";
-import type {
-  PropertiesApiResponse,
-  Property,
-} from "@/modules/properties/types";
+import { deleteProperty, getProperties } from "@/modules/properties/api";
+import {
+  formatPropertyTableRows,
+  PropertyTableRow,
+} from "@/modules/properties/table-rows";
+import type { PropertySummary } from "@/modules/properties/types";
 
 export default function PropertiesTable() {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<PropertySummary[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<PropertyTableRow[]>([]);
   const [searchId, setSearchId] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,32 +19,11 @@ export default function PropertiesTable() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await apiFetch("/api/properties");
+      const payload = await getProperties();
+      const rows = payload.data ?? [];
+      const cleaned = formatPropertyTableRows(rows);
 
-      // Detect backend offline or invalid HTML response
-      const contentType = res.headers.get("content-type") || "";
-      if (!res.ok || contentType.includes("text/html")) {
-        throw new Error("Backend is not reachable");
-      }
-
-      const payload = (await res.json()) as Property[] | PropertiesApiResponse;
-      const rows = Array.isArray(payload) ? payload : (payload?.data ?? []);
-
-      const cleaned: any = rows.map(
-        ({ createdAt, updatedAt, categoryId, description, ...rest }) => ({
-          ...rest,
-          area: `${rest.area} sq ft`,
-          distanceFromHighway:
-            rest.distanceFromHighway !== undefined
-              ? `${rest.distanceFromHighway}m`
-              : "N/A",
-          roi: `${rest.roi}%`,
-          price: `Nrs. ${rest.price} per aana`,
-          category: rest.category?.name ?? "N/A",
-          images: `${rest.images.length} image(s)`,
-        }),
-      );
-      setProperties(cleaned);
+      setProperties(rows);
       setFilteredProperties(cleaned);
     } catch (err: any) {
       console.error("Failed to fetch properties:", err);
@@ -63,7 +42,7 @@ export default function PropertiesTable() {
   // 🔍 handle search by ID
   const handleSearch = () => {
     if (!searchId.trim()) {
-      setFilteredProperties(properties);
+      setFilteredProperties(formatPropertyTableRows(properties));
       return;
     }
     const id = Number(searchId);
@@ -72,13 +51,14 @@ export default function PropertiesTable() {
       return;
     }
     const result = properties.filter((p) => p.id === id);
-    setFilteredProperties(result);
+    setFilteredProperties(formatPropertyTableRows(result));
   };
 
-  const handleRowClick = (row: Property) => console.log("Row clicked:", row);
-  const handleEdit = (row: Property) =>
+  const handleRowClick = (row: PropertyTableRow) =>
+    console.log("Row clicked:", row);
+  const handleEdit = (row: PropertyTableRow) =>
     router.push(`/admin/editProperty/${row.id}`);
-  const handleDelete = async (row: Property) => {
+  const handleDelete = async (row: PropertyTableRow) => {
     const confirmDelete = confirm(
       "Are you sure you want to delete this property?",
     );
@@ -143,7 +123,7 @@ export default function PropertiesTable() {
         </div>
       </div>
 
-      <Table<Property>
+      <Table<PropertyTableRow>
         data={filteredProperties}
         hiddenColumns={["priceNpr", "roiPercent", "areaSqft"]}
         onRowClick={handleRowClick}

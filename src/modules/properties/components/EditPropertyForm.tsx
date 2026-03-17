@@ -2,28 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { apiFetch, assetUrl, getApiData, sendForm } from "@/lib/api/client";
+import { apiFetch, assetUrl } from "@/lib/api/client";
+import { getCategories } from "@/modules/categories/api";
+import { getProperty, updateProperty } from "@/modules/properties/api";
+import { createEmptyPropertyFormData } from "@/modules/properties/form-data";
 import type {
   CategoryOption,
   LocationSuggestion,
-  Property,
+  PropertyDetail,
   PropertyFormData,
 } from "@/modules/properties/types";
 
-const initialFormData: PropertyFormData = {
-  title: "",
-  categoryId: 0,
-  location: "",
-  price: "",
-  roi: "",
-  status: "",
-  area: "",
-  areaNepali: "",
-  distanceFromHighway: undefined,
-  images: [],
-  existingImages: [],
-  description: "",
-};
+const initialFormData = createEmptyPropertyFormData();
 
 const EditPropertyForm: React.FC = () => {
   const router = useRouter();
@@ -51,15 +41,14 @@ const EditPropertyForm: React.FC = () => {
     const fetchData = async () => {
       try {
         const [categories, property] = await Promise.all([
-          getApiData<CategoryOption[]>("/api/categories"),
-          getApiData<Property>(`/api/properties/${id}`),
+          getCategories(),
+          getProperty(String(id)),
         ]);
 
-        const existing = (property.images || []).map((img: string) =>
-          assetUrl(img),
-        );
+        const existing = property.images || [];
+        const existingPreviewUrls = existing.map((img: string) => assetUrl(img));
 
-        setCategories(categories);
+        setCategories(categories as CategoryOption[]);
         setFormData({
           ...initialFormData,
           ...property,
@@ -68,7 +57,7 @@ const EditPropertyForm: React.FC = () => {
         });
         setLocationQuery(property.location || "");
         setSelectedLocationPlaceId("__existing__");
-        setPreviews(existing); // start with existing previews
+        setPreviews(existingPreviewUrls);
       } catch (err) {
         console.error("Error loading property:", err);
       } finally {
@@ -240,34 +229,7 @@ const EditPropertyForm: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const form = new FormData();
-      form.append("title", formData.title);
-      form.append("categoryId", String(formData.categoryId));
-      form.append("location", formData.location);
-      form.append("price", formData.price);
-      form.append("roi", formData.roi);
-      form.append("status", formData.status);
-      form.append("area", formData.area);
-      if (formData.areaNepali) form.append("areaNepali", formData.areaNepali);
-      if (formData.distanceFromHighway !== undefined)
-        form.append(
-          "distanceFromHighway",
-          String(formData.distanceFromHighway),
-        );
-      form.append("description", formData.description);
-
-      formData.images.forEach((file) => {
-        form.append("images", file);
-      });
-
-      if (formData.existingImages && formData.existingImages.length > 0) {
-        form.append("existingImages", JSON.stringify(formData.existingImages));
-      }
-
-      await sendForm(`/api/properties/${id}`, {
-        method: "PUT",
-        body: form,
-      });
+      await updateProperty(String(id), formData);
 
       alert("Property updated successfully!");
       router.push("/admin/properties");
