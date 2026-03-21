@@ -1,8 +1,8 @@
-import Recommendations from "@/components/Recommendations";
+import RecommendationPage from "@/modules/recommendations/components/RecommendationPage";
 import React from "react";
 
 const RecommendationsPage = () => {
-  return <Recommendations />;
+  return <RecommendationPage />;
 };
 
 export default RecommendationsPage;
