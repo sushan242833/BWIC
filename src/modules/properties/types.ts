@@ -16,12 +16,9 @@ export interface PropertySummary {
   category: CategoryOption | null;
   location: string;
   price: string;
-  priceNpr?: number;
   roi: string;
-  roiPercent?: number;
   status: string;
   area: string;
-  areaSqft?: number;
   areaNepali?: string;
   distanceFromHighway?: number;
   images: string[];

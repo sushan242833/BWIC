@@ -9,5 +9,6 @@ export const navItems: NavbarItem[] = [
   { name: "About", path: "/about" },
   { name: "Services", path: "/services" },
   { name: "Properties", path: "/properties" },
+  { name: "Recommendations", path: "/recommendations" },
   { name: "Contact", path: "/contact" },
 ];

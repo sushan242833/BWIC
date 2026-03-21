@@ -125,7 +125,7 @@ export default function PropertiesTable() {
 
       <Table<PropertyTableRow>
         data={filteredProperties}
-        hiddenColumns={["priceNpr", "roiPercent", "areaSqft"]}
+        hiddenColumns={[]}
         onRowClick={handleRowClick}
         onEdit={handleEdit}
         onDelete={handleDelete}
