@@ -1,0 +1,36 @@
+const API_BASE_PATH = "/api";
+
+const withApiBasePath = (path: string): string => `${API_BASE_PATH}${path}`;
+
+export const API_ENDPOINTS = {
+  auth: {
+    me: withApiBasePath("/auth/me"),
+    register: withApiBasePath("/auth/register"),
+    login: withApiBasePath("/auth/login"),
+    forgotPassword: withApiBasePath("/auth/forgot-password"),
+    validateResetToken: withApiBasePath("/auth/validate-reset-token"),
+    resetPassword: withApiBasePath("/auth/reset-password"),
+    logout: withApiBasePath("/auth/logout"),
+  },
+  properties: {
+    list: withApiBasePath("/properties"),
+    detail: (id: string | number) => withApiBasePath(`/properties/${id}`),
+  },
+  categories: {
+    list: withApiBasePath("/categories"),
+    detail: (id: string | number) => withApiBasePath(`/categories/${id}`),
+  },
+  recommendations: {
+    list: withApiBasePath("/recommendations"),
+  },
+  locations: {
+    autocomplete: withApiBasePath("/locations/autocomplete"),
+    placeDetails: withApiBasePath("/locations/place-details"),
+  },
+  contacts: {
+    list: withApiBasePath("/contacts"),
+  },
+  stats: {
+    summary: withApiBasePath("/stats"),
+  },
+} as const;

@@ -1,10 +1,15 @@
 // pages/properties/[id].tsx
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
+import { APP_ROUTES } from "@/config/routes";
 import { contactInfo } from "@/utils/ContactInformation";
 import { capitalize } from "@/utils/Capitalize";
 import { assetUrl } from "@/lib/api/client";
 import { getProperty } from "@/modules/properties/api";
+import {
+  formatPropertyStatus,
+  getPropertyStatusBadgeClass,
+} from "@/modules/properties/status";
 import type { PropertyDetail as PropertyDetailType } from "@/modules/properties/types";
 
 const PropertyDetail = () => {
@@ -84,7 +89,7 @@ const PropertyDetail = () => {
           </p>
 
           <button
-            onClick={() => router.push("/properties")}
+            onClick={() => router.push(APP_ROUTES.properties)}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-colors font-semibold shadow-md mx-auto"
           >
             <svg
@@ -108,32 +113,19 @@ const PropertyDetail = () => {
     );
   }
 
-  const getStatusColor = (status?: string) => {
-    switch ((status || "").toLowerCase()) {
-      case "available":
-        return "bg-green-100 text-green-800";
-      case "sold":
-        return "bg-red-100 text-red-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="flex items-center space-x-2 text-sm text-gray-600">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push(APP_ROUTES.home)}
             className="hover:text-blue-600 transition-colors"
           >
             Home
           </button>
           <span>/</span>
           <button
-            onClick={() => router.push("/properties")}
+            onClick={() => router.push(APP_ROUTES.properties)}
             className="hover:text-blue-600 transition-colors"
           >
             Properties
@@ -175,11 +167,11 @@ const PropertyDetail = () => {
             </div>
             <div className="flex items-center">
               <span
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(
+                className={`px-4 py-2 rounded-full text-sm font-semibold ${getPropertyStatusBadgeClass(
                   property.status,
                 )}`}
               >
-                {property.status || "Unknown"}
+                {formatPropertyStatus(property.status)}
               </span>
             </div>
           </div>
@@ -302,7 +294,7 @@ const PropertyDetail = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="text-center">
                 <p className="text-gray-600 font-medium mb-2 text-2xl">
-                  Price <span className="text-sm">(per aana)</span>
+                  Price <span className="text-sm"></span>
                 </p>
                 <p className="text-3xl font-bold text-gray-900 mb-4">
                   NRs. {property.price}
@@ -454,7 +446,7 @@ const PropertyDetail = () => {
         {/* Back Button */}
         <div className="mt-12 flex justify-center">
           <button
-            onClick={() => router.push("/properties")}
+            onClick={() => router.push(APP_ROUTES.properties)}
             className="inline-flex items-center px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium shadow-sm cursor-pointer"
           >
             <svg

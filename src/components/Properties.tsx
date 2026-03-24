@@ -2,18 +2,34 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { capitalize } from "@/utils/Capitalize";
 import { contactInfo } from "@/utils/ContactInformation";
-import { apiFetch, assetUrl } from "@/lib/api/client";
+import { APP_ROUTES } from "@/config/routes";
+import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
+import {
+  getLocationSuggestions,
+  LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
+  shouldFetchLocationSuggestions,
+} from "@/modules/locations/api";
 import { getProperties } from "@/modules/properties/api";
 import {
   countActivePropertyFilters,
   defaultPropertyFilters,
   defaultPropertySort,
+  PROPERTY_FILTER_STATUS_OPTIONS,
   PROPERTY_SORT_OPTIONS,
-  PROPERTY_STATUS_OPTIONS,
   PropertyFilters,
   PropertySortValue,
 } from "@/modules/properties/filters";
+import {
+  PROPERTY_DEFAULT_PAGE_SIZE,
+  PROPERTY_FILTER_TEXT,
+  PROPERTY_LIST_PAGE_SIZE_OPTIONS,
+  PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+} from "@/modules/properties/constants";
+import {
+  formatPropertyStatus,
+  getPropertyStatusTextClass,
+} from "@/modules/properties/status";
 import type {
   LocationSuggestion,
   PropertySummary,
@@ -23,7 +39,7 @@ import type { CategorySummary } from "@/modules/categories/types";
 
 const defaultPagination = {
   page: 1,
-  limit: 9,
+  limit: PROPERTY_DEFAULT_PAGE_SIZE,
   total: 0,
   totalPages: 1,
   hasNext: false,
@@ -36,7 +52,9 @@ const Properties = () => {
 
   const [properties, setProperties] = useState<PropertySummary[]>([]);
   const [categories, setCategories] = useState<CategorySummary[]>([]);
-  const [filters, setFilters] = useState<PropertyFilters>(defaultPropertyFilters);
+  const [filters, setFilters] = useState<PropertyFilters>(
+    defaultPropertyFilters,
+  );
   const [appliedFilters, setAppliedFilters] = useState<PropertyFilters>(
     defaultPropertyFilters,
   );
@@ -82,7 +100,11 @@ const Properties = () => {
         setPagination(
           response?.pagination
             ? response.pagination
-            : { ...defaultPagination, page: pagination.page, limit: pagination.limit }
+            : {
+                ...defaultPagination,
+                page: pagination.page,
+                limit: pagination.limit,
+              },
         );
       } catch (err) {
         console.error("Failed to fetch properties:", err);
@@ -97,7 +119,7 @@ const Properties = () => {
   }, [appliedFilters, sort, pagination.page, pagination.limit]);
 
   useEffect(() => {
-    if (locationQuery.trim().length < 2) {
+    if (!shouldFetchLocationSuggestions(locationQuery)) {
       setLocationSuggestions([]);
       return;
     }
@@ -105,27 +127,21 @@ const Properties = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await apiFetch(
-          `/api/locations/autocomplete?q=${encodeURIComponent(
-            locationQuery.trim(),
-          )}`,
-        );
-        if (!res.ok) throw new Error("Failed to fetch location suggestions");
-        const payload = await res.json();
-        setLocationSuggestions(Array.isArray(payload?.data) ? payload.data : []);
+        const suggestions = await getLocationSuggestions(locationQuery);
+        setLocationSuggestions(Array.isArray(suggestions) ? suggestions : []);
       } catch (fetchError) {
         console.error("Failed to fetch location suggestions:", fetchError);
         setLocationSuggestions([]);
       } finally {
         setLocationLoading(false);
       }
-    }, 300);
+    }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
   }, [locationQuery]);
 
   const handleFilterChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -177,19 +193,6 @@ const Properties = () => {
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "available":
-        return "text-green-600";
-      case "sold":
-        return "text-red-600";
-      case "pending":
-        return "text-yellow-500";
-      default:
-        return "text-slate-600";
-    }
-  };
-
   const activeFilterCount = useMemo(() => {
     return countActivePropertyFilters(appliedFilters);
   }, [appliedFilters]);
@@ -226,45 +229,51 @@ const Properties = () => {
             <div className="relative">
               <input
                 name="location"
-                placeholder="Location"
+                placeholder={PROPERTY_FILTER_TEXT.locationPlaceholder}
                 value={locationQuery}
                 onChange={handleLocationQueryChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
-                onBlur={() => setTimeout(() => setIsLocationDropdownOpen(false), 150)}
+                onBlur={() =>
+                  setTimeout(
+                    () => setIsLocationDropdownOpen(false),
+                    PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+                  )
+                }
                 className="w-full px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
               />
 
-              {isLocationDropdownOpen && locationQuery.trim().length >= 2 && (
-                <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-600 bg-slate-900 shadow-lg max-h-64 overflow-auto">
-                  {locationLoading && (
-                    <div className="px-3 py-2 text-sm text-slate-300">
-                      Loading suggestions...
-                    </div>
-                  )}
+              {isLocationDropdownOpen &&
+                shouldFetchLocationSuggestions(locationQuery) && (
+                  <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-600 bg-slate-900 shadow-lg max-h-64 overflow-auto">
+                    {locationLoading && (
+                      <div className="px-3 py-2 text-sm text-slate-300">
+                        Loading suggestions...
+                      </div>
+                    )}
 
-                  {!locationLoading && locationSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-slate-400">
-                      No locations found
-                    </div>
-                  )}
+                    {!locationLoading && locationSuggestions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-slate-400">
+                        No locations found
+                      </div>
+                    )}
 
-                  {!locationLoading &&
-                    locationSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion.placeId}
-                        type="button"
-                        onClick={() => handleLocationSelect(suggestion)}
-                        className={`block w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700 ${
-                          selectedLocationPlaceId === suggestion.placeId
-                            ? "bg-slate-700"
-                            : ""
-                        }`}
-                      >
-                        {suggestion.description}
-                      </button>
-                    ))}
-                </div>
-              )}
+                    {!locationLoading &&
+                      locationSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.placeId}
+                          type="button"
+                          onClick={() => handleLocationSelect(suggestion)}
+                          className={`block w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700 ${
+                            selectedLocationPlaceId === suggestion.placeId
+                              ? "bg-slate-700"
+                              : ""
+                          }`}
+                        >
+                          {suggestion.description}
+                        </button>
+                      ))}
+                  </div>
+                )}
             </div>
 
             <select
@@ -273,7 +282,9 @@ const Properties = () => {
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
             >
-              <option value="">All Categories</option>
+              <option value="">
+                {PROPERTY_FILTER_TEXT.allCategoriesLabel}
+              </option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {capitalize(category.name)}
@@ -284,7 +295,7 @@ const Properties = () => {
             <input
               type="number"
               name="minPrice"
-              placeholder="Min Price (NPR)"
+              placeholder={PROPERTY_FILTER_TEXT.minPricePlaceholder}
               value={filters.minPrice}
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
@@ -293,7 +304,7 @@ const Properties = () => {
             <input
               type="number"
               name="maxPrice"
-              placeholder="Max Price (NPR)"
+              placeholder={PROPERTY_FILTER_TEXT.maxPricePlaceholder}
               value={filters.maxPrice}
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
@@ -303,7 +314,7 @@ const Properties = () => {
               type="number"
               step="0.01"
               name="minRoi"
-              placeholder="Min ROI (%)"
+              placeholder={PROPERTY_FILTER_TEXT.minRoiPlaceholder}
               value={filters.minRoi}
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
@@ -312,7 +323,7 @@ const Properties = () => {
             <input
               type="number"
               name="minArea"
-              placeholder="Min Area (sq ft)"
+              placeholder={PROPERTY_FILTER_TEXT.minAreaPlaceholder}
               value={filters.minArea}
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
@@ -321,7 +332,7 @@ const Properties = () => {
             <input
               type="number"
               name="maxDistanceFromHighway"
-              placeholder="Max Distance (m)"
+              placeholder={PROPERTY_FILTER_TEXT.maxDistancePlaceholder}
               value={filters.maxDistanceFromHighway}
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
@@ -333,8 +344,8 @@ const Properties = () => {
               onChange={handleFilterChange}
               className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
             >
-              {PROPERTY_STATUS_OPTIONS.map((option) => (
-                <option key={option.label} value={option.value}>
+              {PROPERTY_FILTER_STATUS_OPTIONS.map((option) => (
+                <option key={option.value || option.label} value={option.value}>
                   {option.label}
                 </option>
               ))}
@@ -360,10 +371,11 @@ const Properties = () => {
                 onChange={handleLimitChange}
                 className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
               >
-                <option value={6}>6 / page</option>
-                <option value={9}>9 / page</option>
-                <option value={12}>12 / page</option>
-                <option value={18}>18 / page</option>
+                {PROPERTY_LIST_PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option} / page
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -372,20 +384,21 @@ const Properties = () => {
                 onClick={applyFilters}
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
               >
-                Apply
+                {PROPERTY_FILTER_TEXT.applyButton}
               </button>
               <button
                 onClick={clearFilters}
                 className="border border-slate-500 text-white px-4 py-2 rounded-md hover:bg-slate-700 transition"
               >
-                Clear
+                {PROPERTY_FILTER_TEXT.clearButton}
               </button>
             </div>
           </div>
         </div>
 
         <div className="mt-3 text-sm text-slate-300">
-          Active filters: {activeFilterCount} | Total results: {pagination.total}
+          Active filters: {activeFilterCount} | Total results:{" "}
+          {pagination.total}
         </div>
       </div>
 
@@ -394,11 +407,15 @@ const Properties = () => {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >
         {loading && (
-          <div className="text-white col-span-full text-center py-10">Loading properties...</div>
+          <div className="text-white col-span-full text-center py-10">
+            Loading properties...
+          </div>
         )}
 
         {!loading && error && (
-          <div className="text-red-400 col-span-full text-center py-10">{error}</div>
+          <div className="text-red-400 col-span-full text-center py-10">
+            {error}
+          </div>
         )}
 
         {!loading && !error && properties.length === 0 && (
@@ -412,7 +429,9 @@ const Properties = () => {
           properties.map((property) => (
             <div
               key={property.id}
-              onClick={() => router.push(`/properties/${property.id}`)}
+              onClick={() =>
+                router.push(APP_ROUTES.propertyDetail(property.id))
+              }
               className="cursor-pointer bg-white rounded-2xl shadow-md hover:shadow-xl transition-all p-6 flex flex-col"
             >
               {property.images?.length > 0 && (
@@ -432,7 +451,7 @@ const Properties = () => {
               <div className="grid grid-cols-2 gap-4 text-sm text-slate-700 mt-auto">
                 <div>
                   <p className="font-medium">NRs. {property.price}</p>
-                  <p className="text-xs text-slate-500">Price (per aana)</p>
+                  <p className="text-xs text-slate-500">Price </p>
                 </div>
                 <div>
                   <p className="font-medium">{property.roi}%</p>
@@ -450,13 +469,19 @@ const Properties = () => {
                 )}
                 {property.distanceFromHighway !== undefined && (
                   <div>
-                    <p className="font-medium">{property.distanceFromHighway}m</p>
+                    <p className="font-medium">
+                      {property.distanceFromHighway}m
+                    </p>
                     <p className="text-xs text-slate-500">From Highway</p>
                   </div>
                 )}
                 <div>
-                  <p className={`font-medium ${getStatusColor(property.status)}`}>
-                    {capitalize(property.status)}
+                  <p
+                    className={`font-medium ${getPropertyStatusTextClass(
+                      property.status,
+                    )}`}
+                  >
+                    {formatPropertyStatus(property.status)}
                   </p>
                   <p className="text-xs text-slate-500">Status</p>
                 </div>
@@ -468,12 +493,15 @@ const Properties = () => {
       <div className="max-w-7xl mx-auto mt-10 flex items-center justify-center gap-4">
         <button
           onClick={() =>
-            setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))
+            setPagination((prev) => ({
+              ...prev,
+              page: Math.max(1, prev.page - 1),
+            }))
           }
           disabled={!pagination.hasPrev}
           className="px-4 py-2 rounded-md border border-slate-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Previous
+          {PROPERTY_FILTER_TEXT.previousButton}
         </button>
         <p className="text-slate-300">
           Page {pagination.page} of {pagination.totalPages}
@@ -485,7 +513,7 @@ const Properties = () => {
           disabled={!pagination.hasNext}
           className="px-4 py-2 rounded-md border border-slate-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Next
+          {PROPERTY_FILTER_TEXT.nextButton}
         </button>
       </div>
 

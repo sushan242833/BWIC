@@ -11,7 +11,12 @@ import {
   logoutUser,
   registerUser,
 } from "@/modules/auth/api";
-import { AuthUser, LoginPayload, RegisterPayload } from "@/modules/auth/types";
+import {
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+  USER_ROLE,
+} from "@/modules/auth/types";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -72,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated: Boolean(user),
-        isAdmin: user?.role === "ADMIN",
+        isAdmin: user?.role === USER_ROLE.ADMIN,
         isLoading,
         refreshUser,
         login,

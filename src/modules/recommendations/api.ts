@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/lib/api/routes";
 import { getJson } from "@/lib/api/client";
 import type {
   RecommendationPreferences,
@@ -47,7 +48,7 @@ const omitEmptySections = (query: RecommendationQuery): RecommendationQuery => {
 export const getRecommendations = async (
   query: RecommendationQuery,
 ): Promise<RecommendationResponse> =>
-  getJson("/api/recommendations", {
+  getJson(API_ENDPOINTS.recommendations.list, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

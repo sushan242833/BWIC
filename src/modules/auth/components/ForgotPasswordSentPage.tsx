@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { MailCheck, ShieldCheck, Headset } from "lucide-react";
+import { MailCheck } from "lucide-react";
+import { APP_ROUTES } from "@/config/routes";
 import { forgotPassword } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
 import {
@@ -64,7 +65,7 @@ export default function ForgotPasswordSentPage() {
 
   const handleResend = async () => {
     if (!email) {
-      await router.push("/forgot-password");
+      await router.push(APP_ROUTES.forgotPassword);
       return;
     }
 
@@ -127,7 +128,7 @@ export default function ForgotPasswordSentPage() {
 
           <div className="mt-10 flex flex-col gap-4">
             <Link
-              href="/login"
+              href={APP_ROUTES.login}
               className="w-full rounded-[18px] border-2 border-[#bcc4dc] px-6 py-4 text-sm font-bold tracking-[0.22em] text-[#131b2e] uppercase transition hover:border-[#004ac6]/30 hover:bg-[#f6f7ff]"
             >
               Return to Login

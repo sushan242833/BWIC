@@ -11,6 +11,7 @@ import {
   LockKeyhole,
   TriangleAlert,
 } from "lucide-react";
+import { APP_ROUTES } from "@/config/routes";
 import { resetPassword, validateResetToken } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
 import {
@@ -152,7 +153,7 @@ export default function ResetPasswordPage() {
       setSuccess("Password reset successful. Redirecting you to login...");
 
       window.setTimeout(() => {
-        void router.replace("/login");
+        void router.replace(APP_ROUTES.login);
       }, 1800);
     } catch (submissionError) {
       setError(
@@ -209,13 +210,13 @@ export default function ResetPasswordPage() {
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/forgot-password"
+                href={APP_ROUTES.forgotPassword}
                 className="auth-recovery-primary-button flex-1 rounded-[16px] px-6 py-4 text-sm font-bold tracking-[0.22em] text-white uppercase shadow-[0_16px_28px_rgba(0,74,198,0.24)] transition hover:scale-[1.01]"
               >
                 Request New Link
               </Link>
               <Link
-                href="/login"
+                href={APP_ROUTES.login}
                 className="flex-1 rounded-[16px] border border-[#c3c6d7] px-6 py-4 text-sm font-bold tracking-[0.22em] text-[#131b2e] uppercase transition hover:border-[#004ac6]/30 hover:bg-[#f6f7ff]"
               >
                 Return to Login
@@ -374,7 +375,7 @@ export default function ResetPasswordPage() {
 
           <div className="mt-8 border-t border-[#e6e9f8] pt-8 text-center">
             <Link
-              href="/login"
+              href={APP_ROUTES.login}
               className="inline-flex items-center gap-2 text-lg font-medium text-[#004ac6] transition hover:underline"
             >
               <ArrowLeft className="h-5 w-5" />

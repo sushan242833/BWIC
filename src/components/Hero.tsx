@@ -1,196 +1,67 @@
 import Link from "next/link";
 import React from "react";
+import { APP_ROUTES } from "@/config/routes";
+
+const HERO_BACKGROUND_IMAGE = "/images/hero_section.png";
 
 const HeroSection: React.FC = () => {
   return (
-    <section className="relative h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center overflow-hidden mt-15">
-      {/* Animated Grid Background */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cpattern id='grid' width='10' height='10' patternUnits='userSpaceOnUse'%3e%3cpath d='m 10 0 l 0 0 0 10' fill='none' stroke='white' stroke-width='0.5'/%3e%3c/pattern%3e%3c/defs%3e%3crect width='100' height='100' fill='url(%23grid)'/%3e%3c/svg%3e")`,
-          animation: "gridMove 20s linear infinite",
-        }}
-      />
+    <section
+      aria-labelledby="hero-heading"
+      className="relative overflow-hidden bg-[#faf8ff]"
+    >
+      <div className="relative min-h-[720px] sm:min-h-[780px] lg:min-h-[921px]">
+        <div className="absolute inset-0">
+          <img
+            src={HERO_BACKGROUND_IMAGE}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center"
+          />
 
-      {/* Floating Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute top-1/4 left-1/4 w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl opacity-10 animate-float"
-          style={{ animationDelay: "0s" }}
-        />
-        <div
-          className="absolute top-1/3 right-1/4 w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full opacity-10 animate-float"
-          style={{ animationDelay: "2s" }}
-        />
-        <div
-          className="absolute bottom-1/3 left-1/5 w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl opacity-10 animate-float"
-          style={{ animationDelay: "4s" }}
-        />
-      </div>
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(250,248,255,0.98)_0%,rgba(250,248,255,0.94)_26%,rgba(250,248,255,0.72)_48%,rgba(250,248,255,0.18)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(167,224,218,0.4)_0%,rgba(250,248,255,0)_34%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-52 bg-[linear-gradient(180deg,rgba(250,248,255,0)_0%,#faf8ff_100%)]" />
+        </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <div className="animate-fade-in-up">
-          {/* Company Name */}
-          <div className="text-blue-400 text-sm sm:text-base font-semibold mb-4 tracking-widest uppercase animate-slide-in-left">
-            Blue Whale Investment
+        <div className="relative z-10 mx-auto flex min-h-[720px] sm:min-h-[780px] lg:min-h-[921px] max-w-7xl items-center px-6 py-16 sm:px-8 lg:px-10">
+          <div className="max-w-[680px]">
+            <h1
+              id="hero-heading"
+              className="font-auth-headline text-[clamp(3.5rem,7vw,5.75rem)] font-extrabold leading-[0.94] tracking-[-0.05em] text-[#131b2e]"
+            >
+              <span className="block">Unlock High-Yield</span>
+              <span className="block bg-blue-700 bg-clip-text text-transparent">
+                Real Estate
+              </span>
+              <span className="block">Investments in</span>
+              <span className="block">Nepal</span>
+            </h1>
+
+            <p className="mt-8 max-w-[760px] font-auth-body text-lg leading-[1.5] text-[#434655] sm:text-xl md:text-[1.55rem] md:leading-[1.45]">
+              Data-driven insights and verified opportunities for savvy
+              investors. Experience the next generation of institutional-grade
+              property acquisition.
+            </p>
+
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+              <Link
+                href={APP_ROUTES.properties}
+                className="inline-flex font-auth-body min-h-16 items-center justify-center rounded-2xl bg-blue-700 px-10 py-4 text-sm font-extrabold uppercase tracking-[0.12em] text-white hover:bg-blue-600"
+              >
+                Explore Properties
+              </Link>
+
+              <Link
+                href={APP_ROUTES.recommendations}
+                className="inline-flex min-h-16 items-center justify-center rounded-2xl border-2 border-[#c3c6d7] bg-white/30 px-10 py-4 font-auth-body text-sm font-extrabold uppercase tracking-[0.12em] text-[#004ac6]  hover:bg-white/55"
+              >
+                Get Recommendations
+              </Link>
+            </div>
           </div>
-
-          {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 mb-6 leading-tight animate-slide-in-right">
-            Your Gateway to
-            <br />
-            <span className="text-blue-400">Blue Whale Investment</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-slate-300 text-lg sm:text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in">
-            Discover exclusive real estate investment opportunities across
-            residential, commercial, and luxury property markets. We specialize
-            in high-yield properties with proven track records and exceptional
-            growth potential.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16 animate-slide-in-up">
-            <Link href="/properties" className="group relative ">
-              <button className="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer">
-                <span className="relative z-10">Explore Properties</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
-              </button>
-            </Link>
-          </div>
-
-          {/* Stats Section */}
-          {/* <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-16 animate-fade-in-up">
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-blue-400 mb-2">
-                $3.2B+
-              </div>
-              <div className="text-slate-400 text-sm uppercase tracking-wider">
-                Property Portfolio Value
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-blue-400 mb-2">
-                850+
-              </div>
-              <div className="text-slate-400 text-sm uppercase tracking-wider">
-                Properties Managed
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-blue-400 mb-2">
-                18%
-              </div>
-              <div className="text-slate-400 text-sm uppercase tracking-wider">
-                Average ROI
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
-
-      {/* Custom Styles */}
-      <style jsx>{`
-        @keyframes gridMove {
-          0% {
-            transform: translate(0, 0);
-          }
-          100% {
-            transform: translate(10px, 10px);
-          }
-        }
-
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0px) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-20px) rotate(180deg);
-          }
-        }
-
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slide-in-left {
-          from {
-            opacity: 0;
-            transform: translateX(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes slide-in-right {
-          from {
-            opacity: 0;
-            transform: translateX(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes slide-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-fade-in-up {
-          animation: fade-in-up 1s ease-out;
-        }
-
-        .animate-slide-in-left {
-          animation: slide-in-left 1s ease-out 0.3s both;
-        }
-
-        .animate-slide-in-right {
-          animation: slide-in-right 1s ease-out 0.6s both;
-        }
-
-        .animate-fade-in {
-          animation: fade-in 1s ease-out 0.9s both;
-        }
-
-        .animate-slide-in-up {
-          animation: slide-in-up 1s ease-out 1.2s both;
-        }
-      `}</style>
     </section>
   );
 };

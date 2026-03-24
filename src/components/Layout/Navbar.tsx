@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { navItems as defaultNavItems, NavbarItem } from "@/utils/navItems";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { defaultBrand } from "@/utils/brand";
 
@@ -30,7 +31,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleLogout = async () => {
     await logout();
     setIsMenuOpen(false);
-    await router.push("/");
+    await router.push(APP_ROUTES.home);
   };
 
   return (
@@ -39,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="flex justify-between items-center py-4">
           {/* Brand */}
           <div className="flex items-center space-x-2">
-            <Link href="/">
+            <Link href={APP_ROUTES.home}>
               {brand.logo ? (
                 <img
                   src={brand.logo}
@@ -52,7 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </Link>
-            <Link href="/">
+            <Link href={APP_ROUTES.home}>
               <span className="text-lg font-semibold">{brand.name}</span>
             </Link>
           </div>
@@ -76,7 +77,7 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden md:flex items-center gap-3">
             {!isLoading && !user && (
               <Link
-                href="/login"
+                href={APP_ROUTES.login}
                 className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
                 login
@@ -90,7 +91,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 </span>
                 {isAdmin && (
                   <Link
-                    href="/admin"
+                    href={APP_ROUTES.adminDashboard}
                     className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:text-blue-600"
                   >
                     Admin Panel
@@ -171,7 +172,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 <>
                   <li>
                     <Link
-                      href="/login"
+                      href={APP_ROUTES.login}
                       className="block rounded-md py-2 px-3 text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -180,7 +181,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   </li>
                   <li>
                     <Link
-                      href="/register"
+                      href={APP_ROUTES.register}
                       className="block rounded-md bg-blue-600 py-2 px-3 font-medium text-white"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -198,7 +199,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   {isAdmin && (
                     <li>
                       <Link
-                        href="/admin"
+                        href={APP_ROUTES.adminDashboard}
                         className="block rounded-md py-2 px-3 text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsMenuOpen(false)}
                       >

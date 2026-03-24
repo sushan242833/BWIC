@@ -1,3 +1,9 @@
+import {
+  PROPERTY_FILTER_STATUS_OPTIONS,
+  PROPERTY_SORT_OPTIONS,
+  type PropertySortValue,
+} from "@/modules/properties/constants";
+
 export const PROPERTY_FILTER_KEYS = [
   "location",
   "categoryId",
@@ -33,33 +39,7 @@ export const defaultPropertyFilters: PropertyFilters = {
   status: "",
 };
 
-export const PROPERTY_SORT_VALUES = [
-  "price_asc",
-  "price_desc",
-  "roi_desc",
-  "newest",
-] as const;
-
-export type PropertySortValue = (typeof PROPERTY_SORT_VALUES)[number];
-
 export const defaultPropertySort: PropertySortValue = "newest";
-
-export const PROPERTY_SORT_OPTIONS: Array<{
-  label: string;
-  value: PropertySortValue;
-}> = [
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "roi_desc", label: "ROI: High to Low" },
-];
-
-export const PROPERTY_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "available", label: "Available" },
-  { value: "pending", label: "Pending" },
-  { value: "sold", label: "Sold" },
-] as const;
 
 export interface PropertyFilterQuery extends Partial<PropertyFilters> {
   sort?: PropertySortValue;
@@ -93,3 +73,6 @@ export const countActivePropertyFilters = (filters: PropertyFilters): number =>
   PROPERTY_FILTER_KEYS.reduce((count, key) => {
     return filters[key] !== "" ? count + 1 : count;
   }, 0);
+
+export { PROPERTY_FILTER_STATUS_OPTIONS, PROPERTY_SORT_OPTIONS };
+export type { PropertySortValue };

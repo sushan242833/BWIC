@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import router from "next/router";
 import Table from "@/components/admin/Table";
+import { APP_ROUTES } from "@/config/routes";
 import { deleteProperty, getProperties } from "@/modules/properties/api";
 import {
   formatPropertyTableRows,
@@ -57,7 +58,7 @@ export default function PropertiesTable() {
   const handleRowClick = (row: PropertyTableRow) =>
     console.log("Row clicked:", row);
   const handleEdit = (row: PropertyTableRow) =>
-    router.push(`/admin/editProperty/${row.id}`);
+    router.push(APP_ROUTES.adminEditProperty(row.id));
   const handleDelete = async (row: PropertyTableRow) => {
     const confirmDelete = confirm(
       "Are you sure you want to delete this property?",
@@ -116,7 +117,7 @@ export default function PropertiesTable() {
           </button>
           <button
             className="text-l font-bold text-white bg-green-500 px-4 py-2 rounded hover:cursor-pointer"
-            onClick={() => router.push("/admin/addProperty")}
+            onClick={() => router.push(APP_ROUTES.adminAddProperty)}
           >
             + Add Property
           </button>

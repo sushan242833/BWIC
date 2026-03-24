@@ -1,20 +1,8 @@
+import {
+  RECOMMENDATION_SCORE_LABELS,
+  RECOMMENDATION_SCORE_WEIGHTS,
+} from "@/modules/recommendations/constants";
 import type { RecommendationScoreBreakdown } from "@/modules/recommendations/types";
-
-const scoreLabels: Record<string, string> = {
-  location: "Location",
-  price: "Price",
-  roi: "ROI",
-  area: "Area",
-  distance: "Access",
-};
-
-const scoreWeights: Record<string, number> = {
-  location: 35,
-  price: 35,
-  area: 20,
-  distance: 5,
-  roi: 5,
-};
 
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null) return "N/A";
@@ -64,7 +52,10 @@ const ScoreBreakdown = ({
 
       <div className="mt-4 space-y-4">
         {entries.map(([key, value]) => {
-          const maxWeight = scoreWeights[key] || 0;
+          const maxWeight =
+            RECOMMENDATION_SCORE_WEIGHTS[
+              key as keyof typeof RECOMMENDATION_SCORE_WEIGHTS
+            ] || 0;
           const widthPercent =
             maxWeight > 0
               ? Math.min(100, Math.max(0, (Number(value) / maxWeight) * 100))
@@ -74,7 +65,9 @@ const ScoreBreakdown = ({
             <div key={key}>
               <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                 <span className="font-medium text-slate-600">
-                  {scoreLabels[key] || key}
+                  {RECOMMENDATION_SCORE_LABELS[
+                    key as keyof typeof RECOMMENDATION_SCORE_LABELS
+                  ] || key}
                 </span>
                 <span className="font-bold text-slate-900">
                   {formatNumber(value)} pts

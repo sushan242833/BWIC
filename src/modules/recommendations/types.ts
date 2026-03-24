@@ -1,3 +1,7 @@
+import type {
+  LocationPlaceDetails,
+  LocationSuggestion,
+} from "@/modules/locations/types";
 import type { PropertySummary } from "@/modules/properties/types";
 
 export interface RecommendationPreferences {
@@ -26,21 +30,8 @@ export interface RecommendationPreferencesPayload {
   maxDistanceFromHighway?: number;
 }
 
-export interface RecommendationLocationSuggestion {
-  placeId: string;
-  description: string;
-}
-
-export interface RecommendationPlaceDetails {
-  id: string;
-  primaryText: string;
-  secondaryText: string | null;
-  fullAddress: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-}
+export type RecommendationLocationSuggestion = LocationSuggestion;
+export type RecommendationPlaceDetails = LocationPlaceDetails;
 
 export interface RecommendationExplanation {
   category: "location" | "price" | "roi" | "area" | "distance";

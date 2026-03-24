@@ -2,21 +2,17 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import Layout from "@/components/Layout";
 import AdminLayout from "@/components/admin/AdminLayout";
+import {
+  APP_ROUTES,
+  FULLSCREEN_ROUTES,
+  isProtectedAdminRoute,
+  SESSION_AWARE_AUTH_ROUTES,
+} from "@/config/routes";
 import { AuthProvider } from "@/context/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
+import { USER_ROLE } from "@/modules/auth/types";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-
-const fullscreenRoutes = new Set([
-  "/login",
-  "/register",
-  "/admin/login",
-  "/forgot-password",
-  "/forgot-password/sent",
-  "/reset-password",
-]);
-
-const sessionAwareAuthRoutes = new Set(["/login", "/register", "/admin/login"]);
 
 function FullscreenState({ message }: { message: string }) {
   return (
@@ -33,36 +29,39 @@ function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
-  const isFullscreenRoute = fullscreenRoutes.has(router.pathname);
-  const isSessionAwareAuthRoute = sessionAwareAuthRoutes.has(router.pathname);
-  const isProtectedAdminRoute =
-    router.pathname.startsWith("/admin") && router.pathname !== "/admin/login";
+  const isFullscreenRoute = FULLSCREEN_ROUTES.has(router.pathname);
+  const isSessionAwareAuthRoute = SESSION_AWARE_AUTH_ROUTES.has(router.pathname);
+  const isAdminProtectedPage = isProtectedAdminRoute(router.pathname);
 
   useEffect(() => {
     if (isLoading) {
       return;
     }
 
-    if (isProtectedAdminRoute) {
+    if (isAdminProtectedPage) {
       if (!user) {
         const redirect = encodeURIComponent(router.asPath);
-        void router.replace(`/admin/login?redirect=${redirect}`);
+        void router.replace(`${APP_ROUTES.adminLogin}?redirect=${redirect}`);
         return;
       }
 
-      if (user.role !== "ADMIN") {
-        void router.replace("/");
+      if (user.role !== USER_ROLE.ADMIN) {
+        void router.replace(APP_ROUTES.home);
       }
 
       return;
     }
 
     if (isSessionAwareAuthRoute && user) {
-      void router.replace(user.role === "ADMIN" ? "/admin" : "/");
+      void router.replace(
+        user.role === USER_ROLE.ADMIN
+          ? APP_ROUTES.adminDashboard
+          : APP_ROUTES.home,
+      );
     }
-  }, [isLoading, isProtectedAdminRoute, isSessionAwareAuthRoute, router, user]);
+  }, [isAdminProtectedPage, isLoading, isSessionAwareAuthRoute, router, user]);
 
-  if (isProtectedAdminRoute) {
+  if (isAdminProtectedPage) {
     if (isLoading) {
       return <FullscreenState message="Checking admin access..." />;
     }
@@ -71,7 +70,7 @@ function AppContent({ Component, pageProps }: AppProps) {
       return <FullscreenState message="Redirecting to admin login..." />;
     }
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== USER_ROLE.ADMIN) {
       return <FullscreenState message="Redirecting to the public site..." />;
     }
 

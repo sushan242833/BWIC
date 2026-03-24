@@ -1,3 +1,5 @@
+import { APP_ROUTES } from "@/config/routes";
+
 // navItems.ts
 export interface NavbarItem {
   name: string;
@@ -5,10 +7,10 @@ export interface NavbarItem {
 }
 
 export const navItems: NavbarItem[] = [
-  { name: "Home", path: "/" },
-  { name: "About", path: "/about" },
-  { name: "Services", path: "/services" },
-  { name: "Properties", path: "/properties" },
-  { name: "Recommendations", path: "/recommendations" },
-  { name: "Contact", path: "/contact" },
+  { name: "Home", path: APP_ROUTES.home },
+  { name: "About", path: APP_ROUTES.about },
+  { name: "Services", path: APP_ROUTES.services },
+  { name: "Properties", path: APP_ROUTES.properties },
+  { name: "Recommendations", path: APP_ROUTES.recommendations },
+  { name: "Contact", path: APP_ROUTES.contact },
 ];

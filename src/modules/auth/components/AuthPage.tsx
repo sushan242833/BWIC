@@ -3,8 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Eye, EyeOff } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthUser, UserRole } from "@/modules/auth/types";
+import { AuthUser, USER_ROLE, UserRole } from "@/modules/auth/types";
 
 type AuthPageMode = "login" | "register";
 
@@ -24,20 +25,28 @@ const resolveLandingPath = (
   portal: UserRole | undefined,
   requestedRedirect: string | undefined,
 ) => {
-  if (portal === "ADMIN") {
-    return requestedRedirect?.startsWith("/admin")
+  if (portal === USER_ROLE.ADMIN) {
+    return requestedRedirect?.startsWith(APP_ROUTES.adminDashboard)
       ? requestedRedirect
-      : "/admin";
+      : APP_ROUTES.adminDashboard;
   }
 
-  if (requestedRedirect && !requestedRedirect.startsWith("/admin")) {
+  if (
+    requestedRedirect &&
+    !requestedRedirect.startsWith(APP_ROUTES.adminDashboard)
+  ) {
     return requestedRedirect;
   }
 
-  return user.role === "ADMIN" ? "/admin" : "/";
+  return user.role === USER_ROLE.ADMIN
+    ? APP_ROUTES.adminDashboard
+    : APP_ROUTES.home;
 };
 
-export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
+export default function AuthPage({
+  mode,
+  portal = USER_ROLE.USER,
+}: AuthPageProps) {
   const router = useRouter();
   const { login, register } = useAuth();
   const [fullName, setFullName] = useState("");
@@ -49,7 +58,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRegister = mode === "register";
-  const isAdminLogin = mode === "login" && portal === "ADMIN";
+  const isAdminLogin = mode === "login" && portal === USER_ROLE.ADMIN;
   const requestedRedirect = safeRedirect(router.query.redirect);
 
   const pageCopy = useMemo(() => {
@@ -63,7 +72,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
           <p className="text-sm text-[#434655]">
             Already have an account?
             <Link
-              href="/login"
+              href={APP_ROUTES.login}
               className="ml-1 font-semibold text-[#004ac6] hover:underline"
             >
               Sign in
@@ -81,7 +90,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
         <p className="text-sm text-[#434655]">
           Don't have an account?
           <Link
-            href={"/register"}
+            href={APP_ROUTES.register}
             className="ml-1 font-semibold text-[#004ac6] hover:underline"
           >
             Create one now
@@ -108,13 +117,13 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
             email,
             password,
             rememberMe,
-            scope: isAdminLogin ? "ADMIN" : undefined,
+            scope: isAdminLogin ? USER_ROLE.ADMIN : undefined,
           });
 
       await router.replace(
         resolveLandingPath(
           authenticatedUser,
-          isAdminLogin ? "ADMIN" : undefined,
+          isAdminLogin ? USER_ROLE.ADMIN : undefined,
           requestedRedirect,
         ),
       );
@@ -179,7 +188,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
               {!isRegister && (
                 <div className="mb-10 flex rounded-xl bg-[#eef0ff] p-1.5">
                   <Link
-                    href="/login"
+                    href={APP_ROUTES.login}
                     className={`flex-1 rounded-lg px-4 py-3 text-center text-sm transition-all ${
                       !isAdminLogin
                         ? "bg-white font-semibold text-[#004ac6] shadow-sm"
@@ -189,7 +198,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
                     User Login
                   </Link>
                   <Link
-                    href="/admin/login"
+                    href={APP_ROUTES.adminLogin}
                     className={`flex-1 rounded-lg px-4 py-3 text-center text-sm transition-all ${
                       isAdminLogin
                         ? "bg-white font-semibold text-[#004ac6] shadow-sm"
@@ -207,7 +216,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
                     Create Account
                   </span>
                   <Link
-                    href="/login"
+                    href={APP_ROUTES.login}
                     className="flex-1 rounded-lg px-4 py-3 text-center text-sm font-medium text-[#434655] transition-all hover:text-[#131b2e]"
                   >
                     User Login
@@ -270,7 +279,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
                     </label>
                     {!isRegister && (
                       <Link
-                        href="/forgot-password"
+                        href={APP_ROUTES.forgotPassword}
                         className="text-xs font-semibold text-[#004ac6] hover:underline"
                       >
                         Forgot Password?

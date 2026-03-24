@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/router";
+import { APP_ROUTES } from "@/config/routes";
 import { getCategory, updateCategory } from "@/modules/categories/api";
 
 const EditCategory = () => {
@@ -40,7 +41,7 @@ const EditCategory = () => {
 
       setSuccess("Category updated successfully!");
       setTimeout(() => {
-        router.push("/admin/categories");
+        router.push(APP_ROUTES.adminCategories);
       }, 1000);
     } catch (err: any) {
       setError(

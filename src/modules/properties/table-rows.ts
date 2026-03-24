@@ -26,7 +26,7 @@ export const formatPropertyTableRows = (
           ? `${rest.distanceFromHighway}m`
           : "N/A",
       roi: `${rest.roi}%`,
-      price: `Nrs. ${rest.price} per aana`,
+      price: `Nrs. ${rest.price} `,
       category: rest.category?.name ?? "N/A",
       images: `${rest.images.length} image(s)`,
     }),

@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
-import { Building2 } from "lucide-react";
 import { ReactNode } from "react";
+import { APP_ROUTES } from "@/config/routes";
 
 interface RecoveryShellProps {
   pageTitle: string;
@@ -10,10 +10,10 @@ interface RecoveryShellProps {
 }
 
 const footerLinks = [
-  { href: "/about", label: "About" },
-  { href: "/services", label: "Services" },
-  { href: "/properties", label: "Properties" },
-  { href: "/contact", label: "Contact" },
+  { href: APP_ROUTES.about, label: "About" },
+  { href: APP_ROUTES.services, label: "Services" },
+  { href: APP_ROUTES.properties, label: "Properties" },
+  { href: APP_ROUTES.contact, label: "Contact" },
 ];
 
 export default function RecoveryShell({

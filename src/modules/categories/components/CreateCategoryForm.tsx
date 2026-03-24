@@ -1,5 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import router from "next/router";
+import { APP_ROUTES } from "@/config/routes";
 import { createCategory } from "@/modules/categories/api";
 
 const CreateCategoryForm = () => {
@@ -17,7 +18,7 @@ const CreateCategoryForm = () => {
 
       setSuccess("Category created successfully!");
       setTimeout(() => {
-        router.push("/admin/categories");
+        router.push(APP_ROUTES.adminCategories);
       }, 1000);
       setName("");
     } catch (err: any) {

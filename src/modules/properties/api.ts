@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/lib/api/routes";
 import { getApiData, getJson, sendForm, sendJson } from "@/lib/api/client";
 import {
   buildPropertySearchParams,
@@ -14,26 +15,28 @@ export async function getProperties(
   params?: PropertyFilterQuery,
 ): Promise<PropertiesResponse> {
   const query = buildPropertySearchParams(params).toString();
-  return getJson(`/api/properties${query ? `?${query}` : ""}`);
+  return getJson(
+    `${API_ENDPOINTS.properties.list}${query ? `?${query}` : ""}`,
+  );
 }
 
 export const getProperty = (id: string | number) =>
-  getApiData<PropertyDetail>(`/api/properties/${id}`);
+  getApiData<PropertyDetail>(API_ENDPOINTS.properties.detail(id));
 
 export const createProperty = (data: PropertyFormData) =>
-  sendForm("/api/properties", {
+  sendForm(API_ENDPOINTS.properties.list, {
     method: "POST",
     body: buildPropertyFormPayload(data),
   });
 
 export const updateProperty = (id: string | number, data: PropertyFormData) =>
-  sendForm(`/api/properties/${id}`, {
+  sendForm(API_ENDPOINTS.properties.detail(id), {
     method: "PUT",
     body: buildPropertyFormPayload(data),
   });
 
 export async function deleteProperty(id: number) {
-  return sendJson(`/api/properties/${id}`, {
+  return sendJson(API_ENDPOINTS.properties.detail(id), {
     method: "DELETE",
   });
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import React, { JSX, useState } from "react";
 import { useRouter } from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import {
   faBars,
@@ -30,17 +31,17 @@ export default function AdminLayout({
   navItems = [
     {
       name: "Dashboard",
-      path: "/admin",
+      path: APP_ROUTES.adminDashboard,
       icon: <FontAwesomeIcon icon={faGauge} />,
     },
     {
       name: "Properties",
-      path: "/admin/properties",
+      path: APP_ROUTES.adminProperties,
       icon: <FontAwesomeIcon icon={faHouse} />,
     },
     {
       name: "Categories",
-      path: "/admin/categories",
+      path: APP_ROUTES.adminCategories,
       icon: <FontAwesomeIcon icon={faLayerGroup} />,
     },
   ],
@@ -51,7 +52,7 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     await logout();
-    await router.push("/admin/login");
+    await router.push(APP_ROUTES.adminLogin);
   };
 
   return (
@@ -65,7 +66,7 @@ export default function AdminLayout({
         <div className="flex items-center justify-between mb-6">
           {!sidebarCollapsed && (
             <Link
-              href="/"
+              href={APP_ROUTES.home}
               className="hidden md:block text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-white text-transparent bg-clip-text"
             >
               BWIC
@@ -141,7 +142,7 @@ export default function AdminLayout({
               </div>
             )}
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push(APP_ROUTES.home)}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
             >
               View Site

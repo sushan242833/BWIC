@@ -1,16 +1,22 @@
 import React, { useState } from "react";
+import { API_ENDPOINTS } from "@/lib/api/routes";
 import { contactInfo } from "../utils/ContactInformation";
 import { sendJson } from "@/lib/api/client";
+import {
+  CONTACT_EMAIL_PATTERN,
+  CONTACT_FORM_INITIAL_VALUES,
+  CONTACT_FORM_MESSAGES,
+  CONTACT_INVESTMENT_RANGE_OPTIONS,
+  CONTACT_PHONE_PATTERN,
+  CONTACT_PROPERTY_TYPE_OPTIONS,
+} from "@/modules/contacts/constants";
+
+const createInitialContactFormData = () => ({
+  ...CONTACT_FORM_INITIAL_VALUES,
+});
 
 const ContactSection: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    investmentRange: "",
-    propertyType: "",
-    message: "",
-  });
+  const [formData, setFormData] = useState(createInitialContactFormData);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,28 +40,24 @@ const ContactSection: React.FC = () => {
 
     // Basic required fields check
     if (!name.trim() || !email.trim() || !investmentRange || !propertyType) {
-      alert("Please fill in all required fields.");
+      alert(CONTACT_FORM_MESSAGES.requiredFields);
       return;
     }
 
-    // Email validation regex
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      alert("Please enter a valid email address.");
+    if (!CONTACT_EMAIL_PATTERN.test(email)) {
+      alert(CONTACT_FORM_MESSAGES.invalidEmail);
       return;
     }
 
-    // Phone number validation (basic Nepal phone format — adjust as needed)
-    const phoneRegex = /^(\+977)?[9][6-9]\d{8}$/;
-    if (phone && !phoneRegex.test(phone)) {
-      alert("Please enter a valid phone number.");
+    if (phone && !CONTACT_PHONE_PATTERN.test(phone)) {
+      alert(CONTACT_FORM_MESSAGES.invalidPhone);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await sendJson("/api/contacts", {
+      await sendJson(API_ENDPOINTS.contacts.list, {
         method: "POST",
         body: {
           name,
@@ -67,23 +69,14 @@ const ContactSection: React.FC = () => {
         },
       });
 
-      alert(
-        "Thank you for your inquiry! We'll get back to you within 24 hours.",
-      );
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        investmentRange: "",
-        propertyType: "",
-        message: "",
-      });
+      alert(CONTACT_FORM_MESSAGES.success);
+      setFormData(createInitialContactFormData());
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "An error occurred while sending your message. Please try again later.";
-      alert(`Failed to send message: ${message}`);
+          : CONTACT_FORM_MESSAGES.defaultError;
+      alert(`${CONTACT_FORM_MESSAGES.failurePrefix} ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -286,11 +279,11 @@ const ContactSection: React.FC = () => {
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
                   >
                     <option value="">Select Range</option>
-                    <option value="1cr-2cr">1Cr - 2Cr</option>
-                    <option value="2cr-3cr">2Cr - 3Cr</option>
-                    <option value="3cr-5cr">3Cr - 5Cr</option>
-                    <option value="5cr+">5Cr +</option>
-                    <option value="10cr+">10 Cr +</option>
+                    {CONTACT_INVESTMENT_RANGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -311,12 +304,11 @@ const ContactSection: React.FC = () => {
                   className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
                 >
                   <option value="">Select Property Type</option>
-                  <option value="residential">Residential Real Estate</option>
-                  <option value="commercial">Commercial Real Estate</option>
-                  <option value="land">Land Investment</option>
-                  <option value="development">
-                    Real Estate Development Projects
-                  </option>
+                  {CONTACT_PROPERTY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

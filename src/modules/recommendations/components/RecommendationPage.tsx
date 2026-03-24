@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api/client";
+import {
+  getLocationPlaceDetails,
+  getLocationSuggestions,
+  LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
+  shouldFetchLocationSuggestions,
+} from "@/modules/locations/api";
 import {
   buildRecommendationPreferencesPayload,
   getRecommendations,
 } from "@/modules/recommendations/api";
 import RecommendationResults from "@/modules/recommendations/components/RecommendationResults";
+import {
+  DEFAULT_RECOMMENDATION_PAGINATION,
+  EMPTY_RECOMMENDATION_TOTAL_PAGES,
+  RECOMMENDATION_FORM_TEXT,
+} from "@/modules/recommendations/constants";
 import type {
   RecommendationItem,
   RecommendationLocationSuggestion,
@@ -14,22 +24,8 @@ import type {
 } from "@/modules/recommendations/types";
 import { defaultRecommendationPreferences } from "@/modules/recommendations/types";
 
-const DEFAULT_RECOMMENDATION_PAGE_SIZE = 5;
-const EMPTY_TOTAL_PAGES = 1;
-const LOCATION_AUTOCOMPLETE_MIN_CHARS = 2;
-const LOCATION_AUTOCOMPLETE_DEBOUNCE_MS = 300;
-
 const inputClassName =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-600 focus:ring-4 focus:ring-cyan-100";
-
-const defaultPagination: RecommendationPagination = {
-  page: 1,
-  limit: DEFAULT_RECOMMENDATION_PAGE_SIZE,
-  total: 0,
-  totalPages: EMPTY_TOTAL_PAGES,
-  hasNext: false,
-  hasPrev: false,
-};
 
 const RecommendationPage = () => {
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -44,7 +40,7 @@ const RecommendationPage = () => {
     [],
   );
   const [pagination, setPagination] =
-    useState<RecommendationPagination>(defaultPagination);
+    useState<RecommendationPagination>(DEFAULT_RECOMMENDATION_PAGINATION);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
@@ -68,13 +64,6 @@ const RecommendationPage = () => {
     [appliedPayload],
   );
 
-  const activePreferenceCount = useMemo(
-    () =>
-      Object.values(appliedPayload).filter((value) => value !== undefined)
-        .length,
-    [appliedPayload],
-  );
-
   const requiresLocationSelection =
     preferences.location.trim().length > 0 && !selectedPlaceId;
   const topMatch = recommendations[0];
@@ -87,7 +76,7 @@ const RecommendationPage = () => {
         ...prev,
         page: 1,
         total: 0,
-        totalPages: EMPTY_TOTAL_PAGES,
+        totalPages: EMPTY_RECOMMENDATION_TOTAL_PAGES,
         hasNext: false,
         hasPrev: false,
       }));
@@ -121,7 +110,7 @@ const RecommendationPage = () => {
             : {
                 ...prev,
                 total: 0,
-                totalPages: EMPTY_TOTAL_PAGES,
+                totalPages: EMPTY_RECOMMENDATION_TOTAL_PAGES,
                 hasNext: false,
                 hasPrev: false,
               },
@@ -132,7 +121,7 @@ const RecommendationPage = () => {
         setError(
           fetchError instanceof Error
             ? fetchError.message
-            : "Failed to load recommendations.",
+            : RECOMMENDATION_FORM_TEXT.loadError,
         );
       } finally {
         setLoading(false);
@@ -149,7 +138,7 @@ const RecommendationPage = () => {
   ]);
 
   useEffect(() => {
-    if (preferences.location.trim().length < LOCATION_AUTOCOMPLETE_MIN_CHARS) {
+    if (!shouldFetchLocationSuggestions(preferences.location)) {
       setLocationSuggestions([]);
       return;
     }
@@ -157,20 +146,8 @@ const RecommendationPage = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const response = await apiFetch(
-          `/api/locations/autocomplete?q=${encodeURIComponent(
-            preferences.location.trim(),
-          )}`,
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch location suggestions");
-        }
-
-        const payload = await response.json();
-        setLocationSuggestions(
-          Array.isArray(payload?.data) ? payload.data : [],
-        );
+        const suggestions = await getLocationSuggestions(preferences.location);
+        setLocationSuggestions(Array.isArray(suggestions) ? suggestions : []);
       } catch (fetchError) {
         console.error(
           "Failed to fetch recommendation location suggestions:",
@@ -219,19 +196,8 @@ const RecommendationPage = () => {
     setIsLocationDropdownOpen(false);
 
     try {
-      const response = await apiFetch(
-        `/api/locations/place-details?placeId=${encodeURIComponent(
-          suggestion.placeId,
-        )}`,
-      );
-
-      if (!response.ok) {
-        setSelectedPlaceDetails(null);
-        return;
-      }
-
-      const payload = await response.json();
-      setSelectedPlaceDetails(payload?.data ?? null);
+      const placeDetails = await getLocationPlaceDetails(suggestion.placeId);
+      setSelectedPlaceDetails(placeDetails ?? null);
     } catch (fetchError) {
       console.error("Failed to fetch location details:", fetchError);
       setSelectedPlaceDetails(null);
@@ -257,7 +223,10 @@ const RecommendationPage = () => {
     setAppliedPlaceDetails(null);
     setLocationSuggestions([]);
     setError("");
-    setPagination((prev) => ({ ...defaultPagination, limit: prev.limit }));
+    setPagination((prev) => ({
+      ...DEFAULT_RECOMMENDATION_PAGINATION,
+      limit: prev.limit,
+    }));
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -352,23 +321,22 @@ const RecommendationPage = () => {
                   value={preferences.location}
                   onChange={handlePreferenceChange}
                   onFocus={() => setIsLocationDropdownOpen(true)}
-                  placeholder="Select preferred location"
+                  placeholder={RECOMMENDATION_FORM_TEXT.locationPlaceholder}
                   className={inputClassName}
                 />
 
                 {isLocationDropdownOpen &&
-                  preferences.location.trim().length >=
-                    LOCATION_AUTOCOMPLETE_MIN_CHARS && (
+                  shouldFetchLocationSuggestions(preferences.location) && (
                     <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
                       {locationLoading && (
                         <div className="px-4 py-3 text-sm text-slate-500">
-                          Loading locations...
+                          {RECOMMENDATION_FORM_TEXT.locationLoading}
                         </div>
                       )}
 
                       {!locationLoading && locationSuggestions.length === 0 && (
                         <div className="px-4 py-3 text-sm text-slate-500">
-                          No locations found
+                          {RECOMMENDATION_FORM_TEXT.locationEmpty}
                         </div>
                       )}
 
@@ -396,7 +364,7 @@ const RecommendationPage = () => {
                 name="locationRadiusKm"
                 value={preferences.locationRadiusKm}
                 onChange={handlePreferenceChange}
-                placeholder="Radius km"
+                placeholder={RECOMMENDATION_FORM_TEXT.radiusPlaceholder}
                 className={inputClassName}
               />
               <input
@@ -404,7 +372,7 @@ const RecommendationPage = () => {
                 name="price"
                 value={preferences.price}
                 onChange={handlePreferenceChange}
-                placeholder="Ideal price"
+                placeholder={RECOMMENDATION_FORM_TEXT.pricePlaceholder}
                 className={inputClassName}
               />
               <input
@@ -413,7 +381,7 @@ const RecommendationPage = () => {
                 name="roi"
                 value={preferences.roi}
                 onChange={handlePreferenceChange}
-                placeholder="Target ROI %"
+                placeholder={RECOMMENDATION_FORM_TEXT.roiPlaceholder}
                 className={inputClassName}
               />
               <input
@@ -421,7 +389,7 @@ const RecommendationPage = () => {
                 name="area"
                 value={preferences.area}
                 onChange={handlePreferenceChange}
-                placeholder="Ideal area sqft"
+                placeholder={RECOMMENDATION_FORM_TEXT.areaPlaceholder}
                 className={inputClassName}
               />
             </div>
@@ -432,7 +400,7 @@ const RecommendationPage = () => {
                 name="maxDistanceFromHighway"
                 value={preferences.maxDistanceFromHighway}
                 onChange={handlePreferenceChange}
-                placeholder="Preferred max distance from highway"
+                placeholder={RECOMMENDATION_FORM_TEXT.maxDistancePlaceholder}
                 className={inputClassName}
               />
 
@@ -443,28 +411,27 @@ const RecommendationPage = () => {
                   disabled={requiresLocationSelection}
                   className="rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Generate recommendations
+                  {RECOMMENDATION_FORM_TEXT.generateButton}
                 </button>
                 <button
                   type="button"
                   onClick={clearBrief}
                   className="rounded-2xl border border-slate-200 px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Reset brief
+                  {RECOMMENDATION_FORM_TEXT.resetButton}
                 </button>
               </div>
             </div>
 
             {requiresLocationSelection && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Please choose one of the suggested locations so the
-                recommendation request can include accurate coordinates.
+                {RECOMMENDATION_FORM_TEXT.requiresLocationSelection}
               </div>
             )}
 
             {selectedPlaceDetails && (
               <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-slate-700">
-                Selected location:
+                {RECOMMENDATION_FORM_TEXT.selectedLocationLabel}
                 <span className="ml-1 font-semibold text-slate-900">
                   {selectedPlaceDetails.primaryText}
                 </span>

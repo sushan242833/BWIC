@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { APP_ROUTES } from "@/config/routes";
 import { capitalize } from "@/utils/Capitalize";
 import { assetUrl } from "@/lib/api/client";
 import type { RecommendationItem } from "@/modules/recommendations/types";
@@ -169,7 +170,7 @@ const RecommendationCard = ({
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href={`/properties/${item.property.id}`}
+                  href={APP_ROUTES.propertyDetail(item.property.id)}
                   className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
                   View full property details

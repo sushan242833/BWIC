@@ -1,8 +1,9 @@
+import { PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE } from "@/modules/properties/constants";
 import type { PropertyFormData } from "@/modules/properties/types";
 
 export const createEmptyPropertyFormData = (): PropertyFormData => ({
   title: "",
-  categoryId: 0,
+  categoryId: PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE,
   location: "",
   price: "",
   roi: "",

@@ -1,25 +1,40 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { apiFetch, assetUrl } from "@/lib/api/client";
+import { APP_ROUTES } from "@/config/routes";
+import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
+import {
+  getLocationSuggestions,
+  LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
+  shouldFetchLocationSuggestions,
+} from "@/modules/locations/api";
 import { getProperty, updateProperty } from "@/modules/properties/api";
+import {
+  PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE,
+  PROPERTY_FORM_MESSAGES,
+  PROPERTY_FORM_TEXT,
+  PROPERTY_IMAGE_UPLOAD_LIMIT,
+  PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+  PROPERTY_LOCATION_EXISTING_PLACE_ID,
+  PROPERTY_STATUS_OPTIONS,
+} from "@/modules/properties/constants";
 import { createEmptyPropertyFormData } from "@/modules/properties/form-data";
+import { validatePropertyForm } from "@/modules/properties/form-validation";
 import type {
   CategoryOption,
   LocationSuggestion,
-  PropertyDetail,
   PropertyFormData,
 } from "@/modules/properties/types";
-
-const initialFormData = createEmptyPropertyFormData();
 
 const EditPropertyForm: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
 
-  const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
+  const [formData, setFormData] = useState<PropertyFormData>(() =>
+    createEmptyPropertyFormData(),
+  );
   const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -34,32 +49,35 @@ const EditPropertyForm: React.FC = () => {
   const [selectedLocationPlaceId, setSelectedLocationPlaceId] = useState("");
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
 
-  // Fetch categories + property data
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
 
     const fetchData = async () => {
       try {
-        const [categories, property] = await Promise.all([
+        const [categoryData, property] = await Promise.all([
           getCategories(),
           getProperty(String(id)),
         ]);
 
-        const existing = property.images || [];
-        const existingPreviewUrls = existing.map((img: string) => assetUrl(img));
+        const existingImages = property.images || [];
+        const existingPreviewUrls = existingImages.map((imagePath: string) =>
+          assetUrl(imagePath),
+        );
 
-        setCategories(categories as CategoryOption[]);
+        setCategories(categoryData as CategoryOption[]);
         setFormData({
-          ...initialFormData,
+          ...createEmptyPropertyFormData(),
           ...property,
           images: [],
-          existingImages: existing,
+          existingImages,
         });
         setLocationQuery(property.location || "");
-        setSelectedLocationPlaceId("__existing__");
+        setSelectedLocationPlaceId(PROPERTY_LOCATION_EXISTING_PLACE_ID);
         setPreviews(existingPreviewUrls);
-      } catch (err) {
-        console.error("Error loading property:", err);
+      } catch (error) {
+        console.error("Error loading property:", error);
       } finally {
         setLoading(false);
         setLoadingCategories(false);
@@ -69,17 +87,18 @@ const EditPropertyForm: React.FC = () => {
     fetchData();
   }, [id]);
 
-  // Handle cleanup (revoke blob URLs)
   useEffect(() => {
     return () => {
-      previews.forEach((p) => {
-        if (p && p.startsWith("blob:")) URL.revokeObjectURL(p);
+      previews.forEach((preview) => {
+        if (preview.startsWith("blob:")) {
+          URL.revokeObjectURL(preview);
+        }
       });
     };
   }, [previews]);
 
   useEffect(() => {
-    if (locationQuery.trim().length < 2) {
+    if (!shouldFetchLocationSuggestions(locationQuery)) {
       setLocationSuggestions([]);
       return;
     }
@@ -87,34 +106,25 @@ const EditPropertyForm: React.FC = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await apiFetch(
-          `/api/locations/autocomplete?q=${encodeURIComponent(
-            locationQuery.trim(),
-          )}`,
-        );
-        if (!res.ok) throw new Error("Failed to fetch location suggestions");
-        const payload = await res.json();
-        setLocationSuggestions(
-          Array.isArray(payload?.data) ? payload.data : [],
-        );
+        const suggestions = await getLocationSuggestions(locationQuery);
+        setLocationSuggestions(Array.isArray(suggestions) ? suggestions : []);
       } catch (error) {
         console.error("Failed to fetch location suggestions:", error);
         setLocationSuggestions([]);
       } finally {
         setLocationLoading(false);
       }
-    }, 300);
+    }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
   }, [locationQuery]);
 
-  // Handle text/number inputs
   const handleChange = (
-    e: React.ChangeEvent<
+    event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]:
@@ -129,9 +139,9 @@ const EditPropertyForm: React.FC = () => {
   };
 
   const handleLocationQueryChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const nextQuery = e.target.value;
+    const nextQuery = event.target.value;
     setLocationQuery(nextQuery);
     setIsLocationDropdownOpen(true);
     setSelectedLocationPlaceId("");
@@ -146,17 +156,19 @@ const EditPropertyForm: React.FC = () => {
     setIsLocationDropdownOpen(false);
   };
 
-  // Handle image upload
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const selectedFiles = Array.from(e.target.files);
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) {
+      return;
+    }
 
+    const selectedFiles = Array.from(event.target.files);
     const totalFiles =
       (formData.existingImages?.length || 0) +
       formData.images.length +
       selectedFiles.length;
-    if (totalFiles > 10) {
-      alert("You can only upload up to 10 images.");
+
+    if (totalFiles > PROPERTY_IMAGE_UPLOAD_LIMIT) {
+      alert(PROPERTY_FORM_MESSAGES.imageLimitError);
       return;
     }
 
@@ -170,94 +182,80 @@ const EditPropertyForm: React.FC = () => {
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
 
-  // Remove image (existing or new)
   const removeImage = (index: number, isExisting = false) => {
     setFormData((prev) => {
       if (isExisting) {
-        const updatedExisting = [...(prev.existingImages || [])];
-        updatedExisting.splice(index, 1);
-        return { ...prev, existingImages: updatedExisting };
-      } else {
-        const updatedNew = [...prev.images];
-        updatedNew.splice(index, 1);
-        return { ...prev, images: updatedNew };
+        const updatedExistingImages = [...(prev.existingImages || [])];
+        updatedExistingImages.splice(index, 1);
+        return { ...prev, existingImages: updatedExistingImages };
       }
+
+      const updatedImages = [...prev.images];
+      updatedImages.splice(index, 1);
+      return { ...prev, images: updatedImages };
     });
 
     setPreviews((prev) => {
-      const updated = [...prev];
+      const updatedPreviews = [...prev];
       const existingCount = formData.existingImages?.length || 0;
       const previewIndex = isExisting ? index : existingCount + index;
-      const urlToRevoke = updated[previewIndex];
-      if (urlToRevoke && urlToRevoke.startsWith("blob:")) {
-        URL.revokeObjectURL(urlToRevoke);
+      const previewToRevoke = updatedPreviews[previewIndex];
+      if (previewToRevoke?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewToRevoke);
       }
-      updated.splice(previewIndex, 1);
-      return updated;
+      updatedPreviews.splice(previewIndex, 1);
+      return updatedPreviews;
     });
   };
 
-  // Validation
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.title.trim()) newErrors.title = "Title is required";
-    if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.location.trim() || !selectedLocationPlaceId) {
-      newErrors.location = "Please select location from Google suggestions";
-    }
-    if (!formData.price.trim()) newErrors.price = "Price is required";
-    if (!formData.roi.trim()) newErrors.roi = "ROI is required";
-    if (!formData.status.trim()) newErrors.status = "Status is required";
-    if (!formData.area.trim()) newErrors.area = "Area is required";
-    if (!formData.description.trim())
-      newErrors.description = "Description is required";
-    if (
-      formData.distanceFromHighway !== undefined &&
-      formData.distanceFromHighway < 0
-    ) {
-      newErrors.distanceFromHighway =
-        "Distance from highway cannot be negative";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const nextErrors = validatePropertyForm(formData, {
+      hasSelectedLocation: Boolean(selectedLocationPlaceId),
+    });
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  // Submit handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validate()) {
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       await updateProperty(String(id), formData);
 
-      alert("Property updated successfully!");
-      router.push("/admin/properties");
+      alert(PROPERTY_FORM_MESSAGES.editSuccess);
+      router.push(APP_ROUTES.adminProperties);
     } catch (error) {
       console.error(error);
-      alert("Failed to update property");
+      alert(PROPERTY_FORM_MESSAGES.editError);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading...</div>;
+  if (loading) {
+    return <div className="p-10 text-center">{PROPERTY_FORM_TEXT.loading}</div>;
+  }
 
   return (
     <div className="pt-20 pb-20 px-4 min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          Edit Property
+          {PROPERTY_FORM_TEXT.editTitle}
         </h2>
 
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
-          {/* Title */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Title
+              {PROPERTY_FORM_TEXT.titleLabel}
             </label>
             <input
               type="text"
@@ -271,10 +269,9 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Category */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Category
+              {PROPERTY_FORM_TEXT.categoryLabel}
             </label>
             <select
               name="categoryId"
@@ -283,10 +280,12 @@ const EditPropertyForm: React.FC = () => {
               className="w-full border rounded px-3 py-2"
               disabled={loadingCategories}
             >
-              <option value={0}>Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
+              <option value={PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE}>
+                {PROPERTY_FORM_TEXT.categoryPlaceholder}
+              </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -295,10 +294,9 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Location */}
           <div className="md:col-span-2">
             <label className="block font-medium text-gray-700 mb-1">
-              Location
+              {PROPERTY_FORM_TEXT.locationLabel}
             </label>
             <div className="relative">
               <input
@@ -307,53 +305,56 @@ const EditPropertyForm: React.FC = () => {
                 onChange={handleLocationQueryChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
                 onBlur={() =>
-                  setTimeout(() => setIsLocationDropdownOpen(false), 150)
+                  setTimeout(
+                    () => setIsLocationDropdownOpen(false),
+                    PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+                  )
                 }
-                placeholder="Search location..."
+                placeholder={PROPERTY_FORM_TEXT.locationPlaceholder}
                 className="w-full border rounded px-3 py-2"
               />
 
-              {isLocationDropdownOpen && locationQuery.trim().length >= 2 && (
-                <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
-                  {locationLoading && (
-                    <div className="px-3 py-2 text-sm text-gray-500">
-                      Loading suggestions...
-                    </div>
-                  )}
+              {isLocationDropdownOpen &&
+                shouldFetchLocationSuggestions(locationQuery) && (
+                  <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
+                    {locationLoading && (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {PROPERTY_FORM_TEXT.loadingLocations}
+                      </div>
+                    )}
 
-                  {!locationLoading && locationSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-500">
-                      No locations found
-                    </div>
-                  )}
+                    {!locationLoading && locationSuggestions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {PROPERTY_FORM_TEXT.noLocations}
+                      </div>
+                    )}
 
-                  {!locationLoading &&
-                    locationSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion.placeId}
-                        type="button"
-                        onClick={() => handleLocationSelect(suggestion)}
-                        className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                          selectedLocationPlaceId === suggestion.placeId
-                            ? "bg-gray-100"
-                            : ""
-                        }`}
-                      >
-                        {suggestion.description}
-                      </button>
-                    ))}
-                </div>
-              )}
+                    {!locationLoading &&
+                      locationSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.placeId}
+                          type="button"
+                          onClick={() => handleLocationSelect(suggestion)}
+                          className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                            selectedLocationPlaceId === suggestion.placeId
+                              ? "bg-gray-100"
+                              : ""
+                          }`}
+                        >
+                          {suggestion.description}
+                        </button>
+                      ))}
+                  </div>
+                )}
             </div>
             {errors.location && (
               <p className="text-sm text-red-500 mt-1">{errors.location}</p>
             )}
           </div>
 
-          {/* Price */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Price per aana
+              {PROPERTY_FORM_TEXT.priceLabel}
             </label>
             <input
               step={100000}
@@ -368,10 +369,9 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* ROI */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              ROI (in %)
+              {PROPERTY_FORM_TEXT.roiLabel}
             </label>
             <input
               type="number"
@@ -385,10 +385,9 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Status */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Status
+              {PROPERTY_FORM_TEXT.statusLabel}
             </label>
             <select
               name="status"
@@ -396,17 +395,22 @@ const EditPropertyForm: React.FC = () => {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
             >
-              <option value="">Select Status</option>
-              <option value="Available">Available</option>
+              <option value="">{PROPERTY_FORM_TEXT.statusPlaceholder}</option>
+              {PROPERTY_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             {errors.status && (
               <p className="text-sm text-red-500 mt-1">{errors.status}</p>
             )}
           </div>
 
-          {/* Area */}
           <div>
-            <label className="block font-medium text-gray-700 mb-1">Area</label>
+            <label className="block font-medium text-gray-700 mb-1">
+              {PROPERTY_FORM_TEXT.areaLabel}
+            </label>
             <input
               step={10}
               type="number"
@@ -420,25 +424,26 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Area Nepali */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Area (R-A-P-D)
+              {PROPERTY_FORM_TEXT.areaNepaliLabel}
             </label>
             <input
               type="text"
               name="areaNepali"
               value={formData.areaNepali}
               onChange={handleChange}
-              placeholder="e.g. 0-0-0-0.0"
+              placeholder={PROPERTY_FORM_TEXT.areaNepaliPlaceholder}
               className="w-full border rounded px-3 py-2"
             />
+            {errors.areaNepali && (
+              <p className="text-sm text-red-500 mt-1">{errors.areaNepali}</p>
+            )}
           </div>
 
-          {/* Distance From Highway */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Distance From Highway (m)
+              {PROPERTY_FORM_TEXT.distanceLabel}
             </label>
             <input
               type="number"
@@ -456,23 +461,23 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* --- Image Upload & Preview --- */}
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Images
+              {PROPERTY_FORM_TEXT.imagesLabel}
             </label>
 
-            {/* Unified Previews */}
             {previews.length > 0 && (
               <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                {previews.map((src, idx) => {
+                {previews.map((src, index) => {
                   const existingCount = formData.existingImages?.length || 0;
-                  const isExisting = idx < existingCount;
-                  const indexInSource = isExisting ? idx : idx - existingCount;
+                  const isExisting = index < existingCount;
+                  const sourceIndex = isExisting
+                    ? index
+                    : index - existingCount;
 
                   return (
                     <div
-                      key={`preview-${idx}`}
+                      key={`preview-${index}`}
                       className="relative group rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition"
                     >
                       <img
@@ -482,10 +487,10 @@ const EditPropertyForm: React.FC = () => {
                       />
                       <button
                         type="button"
-                        onClick={() => removeImage(indexInSource, isExisting)}
+                        onClick={() => removeImage(sourceIndex, isExisting)}
                         className="absolute top-1 right-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition"
                       >
-                        ✕
+                        x
                       </button>
                     </div>
                   );
@@ -493,14 +498,14 @@ const EditPropertyForm: React.FC = () => {
               </div>
             )}
 
-            {/* Upload New */}
             <div
-              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition
-      ${
-        formData.images.length + (formData.existingImages?.length || 0) >= 10
-          ? "border-gray-300 bg-gray-50 cursor-not-allowed"
-          : "border-gray-400 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50"
-      }`}
+              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition ${
+                formData.images.length +
+                  (formData.existingImages?.length || 0) >=
+                PROPERTY_IMAGE_UPLOAD_LIMIT
+                  ? "border-gray-300 bg-gray-50 cursor-not-allowed"
+                  : "border-gray-400 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50"
+              }`}
             >
               <input
                 type="file"
@@ -512,22 +517,21 @@ const EditPropertyForm: React.FC = () => {
                 disabled={
                   formData.images.length +
                     (formData.existingImages?.length || 0) >=
-                  10
+                  PROPERTY_IMAGE_UPLOAD_LIMIT
                 }
               />
               <label
                 htmlFor="image-upload"
                 className="cursor-pointer text-yellow-600 hover:text-yellow-500 text-center"
               >
-                Upload images
+                {PROPERTY_FORM_TEXT.imageUploadPrompt}
               </label>
             </div>
           </div>
 
-          {/* Description */}
           <div className="md:col-span-2">
             <label className="block font-medium text-gray-700 mb-1">
-              Description
+              {PROPERTY_FORM_TEXT.descriptionLabel}
             </label>
             <textarea
               name="description"
@@ -541,7 +545,6 @@ const EditPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Submit */}
           <div className="md:col-span-2 text-right">
             <button
               type="submit"
@@ -550,7 +553,9 @@ const EditPropertyForm: React.FC = () => {
                 submitting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
               } text-white font-medium py-2 px-6 rounded transition`}
             >
-              {submitting ? "Updating..." : "Update Property"}
+              {submitting
+                ? PROPERTY_FORM_TEXT.updatingSubmit
+                : PROPERTY_FORM_TEXT.editSubmit}
             </button>
           </div>
         </form>

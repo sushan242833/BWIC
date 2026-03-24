@@ -1,12 +1,9 @@
+import type { LocationSuggestion } from "@/modules/locations/types";
+
 export interface CategoryOption {
   id: number;
   name: string;
   propertyCount?: number;
-}
-
-export interface LocationSuggestion {
-  placeId: string;
-  description: string;
 }
 
 export interface PropertySummary {
@@ -66,3 +63,5 @@ export interface PropertiesApiResponse {
   data: PropertySummary[];
   pagination?: PropertiesResponse["pagination"];
 }
+
+export type { LocationSuggestion };

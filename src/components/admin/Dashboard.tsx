@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { APP_ROUTES } from "@/config/routes";
 import { getApiData } from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/routes";
 
 interface StatsResponse {
   totalProperties: number;
@@ -18,7 +20,9 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const data = await getApiData<StatsResponse>("/api/stats");
+        const data = await getApiData<StatsResponse>(
+          API_ENDPOINTS.stats.summary,
+        );
         setStats(data);
       } catch (err: any) {
         console.error("Failed to fetch stats:", err);
@@ -59,21 +63,21 @@ export default function Dashboard() {
 
   const quickActions = [
     {
-      href: "/admin/addProperty",
+      href: APP_ROUTES.adminAddProperty,
       label: "Add New Property",
       icon: "➕",
       gradient: "from-blue-500 to-blue-600",
       hoverGradient: "from-blue-600 to-blue-700",
     },
     {
-      href: "/admin/properties",
+      href: APP_ROUTES.adminProperties,
       label: "Manage Properties",
       icon: "🏘️",
       gradient: "from-green-500 to-green-600",
       hoverGradient: "from-green-600 to-green-700",
     },
     {
-      href: "/admin/categories",
+      href: APP_ROUTES.adminCategories,
       label: "Manage Categories",
       icon: "🏷️",
       gradient: "from-amber-500 to-amber-600",
@@ -114,7 +118,7 @@ export default function Dashboard() {
               <p className="text-slate-500 font-medium">Properties Listed</p>
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <Link
-                  href="/admin/properties"
+                  href={APP_ROUTES.adminProperties}
                   className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors inline-flex items-center gap-1"
                 >
                   View all{" "}
@@ -144,7 +148,7 @@ export default function Dashboard() {
               <p className="text-slate-500 font-medium">Categories Available</p>
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <Link
-                  href="/admin/categories"
+                  href={APP_ROUTES.adminCategories}
                   className="text-sm text-amber-600 font-semibold hover:text-amber-700 transition-colors inline-flex items-center gap-1"
                 >
                   View all{" "}

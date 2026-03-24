@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/lib/api/routes";
 import { getApiData, sendJson } from "@/lib/api/client";
 import type {
   CategoryDetail,
@@ -5,24 +6,24 @@ import type {
 } from "@/modules/categories/types";
 
 export const getCategories = () =>
-  getApiData<CategorySummary[]>("/api/categories");
+  getApiData<CategorySummary[]>(API_ENDPOINTS.categories.list);
 
 export const getCategory = (id: string | number) =>
-  getApiData<CategoryDetail>(`/api/categories/${id}`);
+  getApiData<CategoryDetail>(API_ENDPOINTS.categories.detail(id));
 
 export const createCategory = (name: string) =>
-  sendJson("/api/categories/", {
+  sendJson(API_ENDPOINTS.categories.list, {
     method: "POST",
     body: { name },
   });
 
 export const updateCategory = (id: string | number, name: string) =>
-  sendJson(`/api/categories/${id}`, {
+  sendJson(API_ENDPOINTS.categories.detail(id), {
     method: "PUT",
     body: { name },
   });
 
 export const deleteCategory = (id: number) =>
-  sendJson(`/api/categories/${id}`, {
+  sendJson(API_ENDPOINTS.categories.detail(id), {
     method: "DELETE",
   });

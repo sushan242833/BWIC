@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { APP_ROUTES } from "@/config/routes";
 
 const CreatePropertyPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    void router.replace("/admin/addProperty");
+    void router.replace(APP_ROUTES.adminAddProperty);
   }, [router]);
 
   return (

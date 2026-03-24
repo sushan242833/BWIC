@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Table from "@/components/admin/Table";
+import { APP_ROUTES } from "@/config/routes";
 import { getCategory } from "@/modules/categories/api";
 import { deleteProperty, getProperties } from "@/modules/properties/api";
 import {
@@ -50,7 +51,7 @@ export default function CategoryPropertiesPage() {
     console.log("Property clicked:", row);
 
   const handleEdit = (row: PropertyTableRow) =>
-    router.push(`/admin/editProperty/${row.id}`);
+    router.push(APP_ROUTES.adminEditProperty(row.id));
 
   const handleDelete = async (row: PropertyTableRow) => {
     const confirmDelete = confirm(

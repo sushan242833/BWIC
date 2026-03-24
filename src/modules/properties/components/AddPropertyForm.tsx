@@ -1,20 +1,35 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { apiFetch } from "@/lib/api/client";
+import React, { useEffect, useState } from "react";
 import { getCategories } from "@/modules/categories/api";
-import { createProperty } from "@/modules/properties/api";
+import {
+  createProperty,
+} from "@/modules/properties/api";
+import {
+  PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE,
+  PROPERTY_FORM_MESSAGES,
+  PROPERTY_FORM_TEXT,
+  PROPERTY_IMAGE_UPLOAD_LIMIT,
+  PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+  PROPERTY_STATUS_OPTIONS,
+} from "@/modules/properties/constants";
 import { createEmptyPropertyFormData } from "@/modules/properties/form-data";
+import { validatePropertyForm } from "@/modules/properties/form-validation";
+import {
+  getLocationSuggestions,
+  LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
+  shouldFetchLocationSuggestions,
+} from "@/modules/locations/api";
 import type {
   CategoryOption,
   LocationSuggestion,
   PropertyFormData,
 } from "@/modules/properties/types";
 
-const initialFormData = createEmptyPropertyFormData();
-
 const AddPropertyForm: React.FC = () => {
-  const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
+  const [formData, setFormData] = useState<PropertyFormData>(() =>
+    createEmptyPropertyFormData(),
+  );
   const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -43,7 +58,7 @@ const AddPropertyForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (locationQuery.trim().length < 2) {
+    if (!shouldFetchLocationSuggestions(locationQuery)) {
       setLocationSuggestions([]);
       return;
     }
@@ -51,31 +66,25 @@ const AddPropertyForm: React.FC = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const res = await apiFetch(
-          `/api/locations/autocomplete?q=${encodeURIComponent(
-            locationQuery.trim(),
-          )}`,
-        );
-        if (!res.ok) throw new Error("Failed to fetch location suggestions");
-        const payload = await res.json();
-        setLocationSuggestions(Array.isArray(payload?.data) ? payload.data : []);
+        const suggestions = await getLocationSuggestions(locationQuery);
+        setLocationSuggestions(Array.isArray(suggestions) ? suggestions : []);
       } catch (error) {
         console.error("Failed to fetch location suggestions:", error);
         setLocationSuggestions([]);
       } finally {
         setLocationLoading(false);
       }
-    }, 300);
+    }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
   }, [locationQuery]);
 
   const handleChange = (
-    e: React.ChangeEvent<
+    event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]:
@@ -89,32 +98,32 @@ const AddPropertyForm: React.FC = () => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-
-      const totalFiles = formData.images.length + selectedFiles.length;
-      if (totalFiles > 10) {
-        alert("You can only upload up to 10 images.");
-        return;
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...selectedFiles],
-      }));
-
-      const newPreviews = selectedFiles.map((file) =>
-        URL.createObjectURL(file)
-      );
-      setPreviews((prev) => [...prev, ...newPreviews]);
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) {
+      return;
     }
+
+    const selectedFiles = Array.from(event.target.files);
+    const totalFiles = formData.images.length + selectedFiles.length;
+
+    if (totalFiles > PROPERTY_IMAGE_UPLOAD_LIMIT) {
+      alert(PROPERTY_FORM_MESSAGES.imageLimitError);
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...selectedFiles],
+    }));
+
+    const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
+    setPreviews((prev) => [...prev, ...newPreviews]);
   };
 
   const handleLocationQueryChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const nextQuery = e.target.value;
+    const nextQuery = event.target.value;
     setLocationQuery(nextQuery);
     setIsLocationDropdownOpen(true);
     setSelectedLocationPlaceId("");
@@ -138,61 +147,51 @@ const AddPropertyForm: React.FC = () => {
 
     setPreviews((prev) => {
       const updatedPreviews = [...prev];
+      const imageToRevoke = updatedPreviews[index];
+      if (imageToRevoke?.startsWith("blob:")) {
+        URL.revokeObjectURL(imageToRevoke);
+      }
       updatedPreviews.splice(index, 1);
       return updatedPreviews;
     });
   };
 
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.title.trim()) newErrors.title = "Title is required";
-    if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.location.trim() || !selectedLocationPlaceId) {
-      newErrors.location = "Please select location from Google suggestions";
-    }
-    if (!formData.price.trim()) newErrors.price = "Price is required";
-    if (!formData.roi.trim()) newErrors.roi = "ROI is required";
-    if (!formData.status.trim()) newErrors.status = "Status is required";
-    if (!formData.area.trim()) newErrors.area = "Area is required";
-    if (!formData.description.trim())
-      newErrors.description = "Description is required";
-    if (
-      formData.distanceFromHighway !== undefined &&
-      formData.distanceFromHighway < 0
-    ) {
-      newErrors.distanceFromHighway =
-        "Distance from highway cannot be negative";
-    }
+    const nextErrors = validatePropertyForm(formData, {
+      hasSelectedLocation: Boolean(selectedLocationPlaceId),
+    });
 
-    if (
-      formData.areaNepali &&
-      !/^\d+-\d+-\d+-\d+(\.\d+)?$/.test(formData.areaNepali)
-    ) {
-      newErrors.areaNepali = "Invalid format (e.g., 0-0-0-0.0)";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validate()) {
+      return;
+    }
 
     try {
       const data = await createProperty(formData);
 
-      alert("Property submitted successfully!");
+      alert(PROPERTY_FORM_MESSAGES.addSuccess);
       console.log("Created property:", data);
 
-      setFormData(initialFormData);
+      setFormData(createEmptyPropertyFormData());
       setLocationQuery("");
       setLocationSuggestions([]);
       setSelectedLocationPlaceId("");
-      setPreviews([]);
+      setPreviews((prev) => {
+        prev.forEach((preview) => {
+          if (preview.startsWith("blob:")) {
+            URL.revokeObjectURL(preview);
+          }
+        });
+        return [];
+      });
     } catch (error) {
       console.error(error);
-      alert("Failed to submit property");
+      alert(PROPERTY_FORM_MESSAGES.addError);
     }
   };
 
@@ -200,17 +199,16 @@ const AddPropertyForm: React.FC = () => {
     <div className="pt-20 pb-20 px-4 min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          Add New Property
+          {PROPERTY_FORM_TEXT.addTitle}
         </h2>
 
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
-          {/* Title */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Title
+              {PROPERTY_FORM_TEXT.titleLabel}
             </label>
             <input
               type="text"
@@ -224,10 +222,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Category */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Category
+              {PROPERTY_FORM_TEXT.categoryLabel}
             </label>
             <select
               name="categoryId"
@@ -236,10 +233,12 @@ const AddPropertyForm: React.FC = () => {
               className="w-full border rounded px-3 py-2"
               disabled={loadingCategories}
             >
-              <option value={0}>Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
+              <option value={PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE}>
+                {PROPERTY_FORM_TEXT.categoryPlaceholder}
+              </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -248,10 +247,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Location */}
           <div className="md:col-span-2">
             <label className="block font-medium text-gray-700 mb-1">
-              Location
+              {PROPERTY_FORM_TEXT.locationLabel}
             </label>
             <div className="relative">
               <input
@@ -259,52 +257,57 @@ const AddPropertyForm: React.FC = () => {
                 value={locationQuery}
                 onChange={handleLocationQueryChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
-                onBlur={() => setTimeout(() => setIsLocationDropdownOpen(false), 150)}
-                placeholder="Search location..."
+                onBlur={() =>
+                  setTimeout(
+                    () => setIsLocationDropdownOpen(false),
+                    PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+                  )
+                }
+                placeholder={PROPERTY_FORM_TEXT.locationPlaceholder}
                 className="w-full border rounded px-3 py-2"
               />
 
-              {isLocationDropdownOpen && locationQuery.trim().length >= 2 && (
-                <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
-                  {locationLoading && (
-                    <div className="px-3 py-2 text-sm text-gray-500">
-                      Loading suggestions...
-                    </div>
-                  )}
+              {isLocationDropdownOpen &&
+                shouldFetchLocationSuggestions(locationQuery) && (
+                  <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
+                    {locationLoading && (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {PROPERTY_FORM_TEXT.loadingLocations}
+                      </div>
+                    )}
 
-                  {!locationLoading && locationSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-gray-500">
-                      No locations found
-                    </div>
-                  )}
+                    {!locationLoading && locationSuggestions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {PROPERTY_FORM_TEXT.noLocations}
+                      </div>
+                    )}
 
-                  {!locationLoading &&
-                    locationSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion.placeId}
-                        type="button"
-                        onClick={() => handleLocationSelect(suggestion)}
-                        className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                          selectedLocationPlaceId === suggestion.placeId
-                            ? "bg-gray-100"
-                            : ""
-                        }`}
-                      >
-                        {suggestion.description}
-                      </button>
-                    ))}
-                </div>
-              )}
+                    {!locationLoading &&
+                      locationSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.placeId}
+                          type="button"
+                          onClick={() => handleLocationSelect(suggestion)}
+                          className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                            selectedLocationPlaceId === suggestion.placeId
+                              ? "bg-gray-100"
+                              : ""
+                          }`}
+                        >
+                          {suggestion.description}
+                        </button>
+                      ))}
+                  </div>
+                )}
             </div>
             {errors.location && (
               <p className="text-sm text-red-500 mt-1">{errors.location}</p>
             )}
           </div>
 
-          {/* Price */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Price per aana
+              {PROPERTY_FORM_TEXT.priceLabel}
             </label>
             <input
               type="number"
@@ -319,10 +322,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* ROI */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              ROI (in %)
+              {PROPERTY_FORM_TEXT.roiLabel}
             </label>
             <input
               type="number"
@@ -336,10 +338,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Status */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Status
+              {PROPERTY_FORM_TEXT.statusLabel}
             </label>
             <select
               name="status"
@@ -347,17 +348,22 @@ const AddPropertyForm: React.FC = () => {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
             >
-              <option value="">Select Status</option>
-              <option value="Available">Available</option>
+              <option value="">{PROPERTY_FORM_TEXT.statusPlaceholder}</option>
+              {PROPERTY_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             {errors.status && (
               <p className="text-sm text-red-500 mt-1">{errors.status}</p>
             )}
           </div>
 
-          {/* Area */}
           <div>
-            <label className="block font-medium text-gray-700 mb-1">Area</label>
+            <label className="block font-medium text-gray-700 mb-1">
+              {PROPERTY_FORM_TEXT.areaLabel}
+            </label>
             <input
               step={10}
               type="number"
@@ -371,17 +377,16 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Area Nepali */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Area (R-A-P-D)
+              {PROPERTY_FORM_TEXT.areaNepaliLabel}
             </label>
             <input
               type="text"
               name="areaNepali"
               value={formData.areaNepali}
               onChange={handleChange}
-              placeholder="e.g. 0-0-0-0.0"
+              placeholder={PROPERTY_FORM_TEXT.areaNepaliPlaceholder}
               className="w-full border rounded px-3 py-2"
             />
             {errors.areaNepali && (
@@ -389,10 +394,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Distance From Highway */}
           <div>
             <label className="block font-medium text-gray-700 mb-1">
-              Distance From Highway (m)
+              {PROPERTY_FORM_TEXT.distanceLabel}
             </label>
             <input
               type="number"
@@ -410,20 +414,20 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Images */}
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Upload Images <span className="text-gray-500">(max 10)</span>
+              {PROPERTY_FORM_TEXT.imagesLabel}{" "}
+              <span className="text-gray-500">
+                {PROPERTY_FORM_TEXT.imagesLimitLabel}
+              </span>
             </label>
 
-            {/* Upload Box */}
             <div
-              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition
-      ${
-        formData.images.length >= 10
-          ? "border-gray-300 bg-gray-50 cursor-not-allowed"
-          : "border-gray-400 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50"
-      }`}
+              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition ${
+                formData.images.length >= PROPERTY_IMAGE_UPLOAD_LIMIT
+                  ? "border-gray-300 bg-gray-50 cursor-not-allowed"
+                  : "border-gray-400 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50"
+              }`}
             >
               <input
                 type="file"
@@ -432,12 +436,12 @@ const AddPropertyForm: React.FC = () => {
                 id="image-upload"
                 onChange={handleImageChange}
                 className="hidden"
-                disabled={formData.images.length >= 10}
+                disabled={formData.images.length >= PROPERTY_IMAGE_UPLOAD_LIMIT}
               />
               <label
                 htmlFor="image-upload"
                 className={`cursor-pointer text-center ${
-                  formData.images.length >= 10
+                  formData.images.length >= PROPERTY_IMAGE_UPLOAD_LIMIT
                     ? "text-gray-400"
                     : "text-yellow-600 hover:text-yellow-500"
                 }`}
@@ -457,36 +461,35 @@ const AddPropertyForm: React.FC = () => {
                   />
                 </svg>
                 <span className="font-medium">
-                  {formData.images.length >= 10
-                    ? "Image limit reached"
-                    : "Click to upload or drag & drop"}
+                  {formData.images.length >= PROPERTY_IMAGE_UPLOAD_LIMIT
+                    ? PROPERTY_FORM_TEXT.imageLimitReached
+                    : PROPERTY_FORM_TEXT.imageUploadPrompt}
                 </span>
                 <p className="text-xs text-gray-500 mt-1">
-                  PNG, JPG up to 5MB each
+                  {PROPERTY_FORM_TEXT.imageUploadHelpText}
                 </p>
               </label>
             </div>
 
-            {/* Preview Grid */}
             {previews.length > 0 && (
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                {previews.map((img, i) => (
+                {previews.map((image, index) => (
                   <div
-                    key={i}
+                    key={index}
                     className="relative group rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition"
                   >
                     <img
-                      src={img}
-                      alt={`Preview ${i}`}
+                      src={image}
+                      alt={`Preview ${index}`}
                       className="w-full h-32 object-cover group-hover:opacity-90"
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(i)}
+                      onClick={() => removeImage(index)}
                       className="absolute top-1 right-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition cursor-pointer"
                       title="Remove image"
                     >
-                      ✕
+                      x
                     </button>
                   </div>
                 ))}
@@ -494,10 +497,9 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Description */}
           <div className="md:col-span-2">
             <label className="block font-medium text-gray-700 mb-1">
-              Description
+              {PROPERTY_FORM_TEXT.descriptionLabel}
             </label>
             <textarea
               name="description"
@@ -511,13 +513,12 @@ const AddPropertyForm: React.FC = () => {
             )}
           </div>
 
-          {/* Submit */}
           <div className="md:col-span-2 text-right">
             <button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition"
             >
-              Add Property
+              {PROPERTY_FORM_TEXT.addSubmit}
             </button>
           </div>
         </form>

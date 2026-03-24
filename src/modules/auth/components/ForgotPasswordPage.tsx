@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FormEvent, useState } from "react";
-import { ArrowLeft, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, KeyRound, Mail } from "lucide-react";
+import { APP_ROUTES } from "@/config/routes";
 import { forgotPassword } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
 import { persistPasswordResetState } from "@/modules/auth/password-reset-storage";
@@ -34,7 +35,7 @@ export default function ForgotPasswordPage() {
         normalizedEmail,
         response.resendCooldownSeconds,
       );
-      await router.push("/forgot-password/sent");
+      await router.push(APP_ROUTES.forgotPasswordSent);
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -107,7 +108,7 @@ export default function ForgotPasswordPage() {
 
           <div className="mt-10 border-t border-[#e6e9f8] pt-8 text-center">
             <Link
-              href="/login"
+              href={APP_ROUTES.login}
               className="inline-flex items-center gap-2 text-lg font-medium text-[#004ac6] transition hover:underline"
             >
               <ArrowLeft className="h-5 w-5" />
