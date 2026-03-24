@@ -23,7 +23,10 @@ export const apiFetch = (
   path: string,
   init?: RequestInit,
 ): Promise<Response> => {
-  return fetch(apiUrl(path), init);
+  return fetch(apiUrl(path), {
+    credentials: "include",
+    ...init,
+  });
 };
 
 const getErrorMessage = async (response: Response): Promise<string> => {
@@ -88,6 +91,18 @@ export const sendJson = async <T>(
   }
 
   return response.json() as Promise<T>;
+};
+
+export const sendApiData = async <T>(
+  path: string,
+  options: {
+    method: "POST" | "PUT" | "PATCH" | "DELETE";
+    body?: unknown;
+    headers?: HeadersInit;
+  },
+): Promise<T> => {
+  const payload = await sendJson<ApiSuccessResponse<T>>(path, options);
+  return payload.data;
 };
 
 export const sendForm = async <T>(

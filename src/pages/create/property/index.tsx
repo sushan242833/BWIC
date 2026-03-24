@@ -1,6 +1,20 @@
-import AddPropertyForm from "@/modules/properties/components/AddPropertyForm";
-import React from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
-const CreatePropertyPage = () => <AddPropertyForm />;
+const CreatePropertyPage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    void router.replace("/admin/addProperty");
+  }, [router]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#faf8ff]">
+      <p className="font-auth-headline text-lg font-semibold text-[#434655]">
+        Redirecting to the admin property form...
+      </p>
+    </div>
+  );
+};
 
 export default CreatePropertyPage;

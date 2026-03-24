@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { usePathname } from "next/navigation";
 import { navItems as defaultNavItems, NavbarItem } from "@/utils/navItems";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { useAuth } from "@/hooks/useAuth";
 import { defaultBrand } from "@/utils/brand";
 
 interface NavbarProps {
@@ -16,8 +17,21 @@ const Navbar: React.FC<NavbarProps> = ({
   brand = defaultBrand,
   navItems = defaultNavItems,
 }) => {
-  const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAdmin, isLoading, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const pathname = router.pathname;
+  const isActivePath = (path: string) =>
+    path === "/"
+      ? pathname === path
+      : pathname === path || pathname.startsWith(`${path}/`);
+
+  const handleLogout = async () => {
+    await logout();
+    setIsMenuOpen(false);
+    await router.push("/");
+  };
 
   return (
     <nav className="bg-white text-black shadow-md fixed top-0 left-0 w-full z-50">
@@ -47,17 +61,51 @@ const Navbar: React.FC<NavbarProps> = ({
           <ul className="hidden md:flex space-x-6">
             {navItems.map((item) => (
               <li key={item.path}>
-                <a
+                <Link
                   href={item.path}
                   className={`hover:text-blue-600 ${
-                    pathname === item.path ? "text-blue-700 font-semibold" : ""
+                    isActivePath(item.path) ? "text-blue-700 font-semibold" : ""
                   }`}
                 >
                   {item.name}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
+
+          <div className="hidden md:flex items-center gap-3">
+            {!isLoading && !user && (
+              <Link
+                href="/login"
+                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                login
+              </Link>
+            )}
+
+            {!isLoading && user && (
+              <>
+                <span className="text-sm font-medium text-slate-600">
+                  {user.fullName}
+                </span>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:text-blue-600"
+                  >
+                    Admin Panel
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+          </div>
 
           {/* Hamburger */}
           <div className="md:hidden">
@@ -105,19 +153,70 @@ const Navbar: React.FC<NavbarProps> = ({
             <ul className="space-y-2 pb-4 pt-2">
               {navItems.map((item) => (
                 <li key={item.path}>
-                  <a
+                  <Link
                     href={item.path}
                     className={`block py-2 px-3 rounded-md ${
-                      pathname === item.path
+                      isActivePath(item.path)
                         ? "bg-blue-100 text-blue-700 font-medium"
                         : "text-gray-700 hover:bg-gray-100"
                     }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
+
+              {!isLoading && !user && (
+                <>
+                  <li>
+                    <Link
+                      href="/login"
+                      className="block rounded-md py-2 px-3 text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/register"
+                      className="block rounded-md bg-blue-600 py-2 px-3 font-medium text-white"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Register
+                    </Link>
+                  </li>
+                </>
+              )}
+
+              {!isLoading && user && (
+                <>
+                  <li className="px-3 pt-2 text-sm font-medium text-slate-500">
+                    Signed in as {user.fullName}
+                  </li>
+                  {isAdmin && (
+                    <li>
+                      <Link
+                        href="/admin"
+                        className="block rounded-md py-2 px-3 text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
+                    </li>
+                  )}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      className="block w-full rounded-md bg-slate-900 py-2 px-3 text-left font-medium text-white"
+                    >
+                      Logout
+                    </button>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         )}

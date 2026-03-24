@@ -4,6 +4,7 @@ import { apiBaseUrl } from "@/lib/api";
 // Create the Axios instance
 const API = axios.create({
   baseURL: apiBaseUrl,
+  withCredentials: true,
 });
 
 type AxiosLikeError = {

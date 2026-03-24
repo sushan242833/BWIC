@@ -2,6 +2,7 @@ import Link from "next/link";
 import React, { JSX, useState } from "react";
 import { useRouter } from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useAuth } from "@/hooks/useAuth";
 import {
   faBars,
   faXmark,
@@ -45,8 +46,13 @@ export default function AdminLayout({
   ],
 }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    await router.push("/admin/login");
+  };
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -123,15 +129,32 @@ export default function AdminLayout({
             <span className="text-xl font-bold">{title}</span>
           </div>
 
-          <div className="relative flex items-center gap-3 pr-8">
+          <div className="flex items-center gap-4 pr-4">
+            {user && (
+              <div className="text-right">
+                <p className="text-sm font-semibold text-slate-800">
+                  {user.fullName}
+                </p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  {user.role}
+                </p>
+              </div>
+            )}
             <button
               onClick={() => router.push("/")}
-              className="flex items-center gap-2 focus:outline-none cursor-pointer"
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
+            >
+              View Site
+            </button>
+            <button
+              onClick={() => void handleLogout()}
+              className="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white focus:outline-none cursor-pointer transition hover:bg-slate-700"
             >
               <FontAwesomeIcon
                 icon={faArrowRightFromBracket}
-                className="text-2xl "
+                className="text-base"
               />
+              <span>Logout</span>
             </button>
           </div>
         </header>
