@@ -49,3 +49,34 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+.auth-recovery-shell {
+  background:
+    radial-gradient(circle at top center, rgba(75, 65, 225, 0.1), transparent 30%),
+    linear-gradient(180deg, #f7f6ff 0%, #f9f8ff 100%);
+}
+
+.auth-recovery-card {
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 24px 60px rgba(19, 27, 46, 0.08);
+}
+
+.auth-recovery-primary-button {
+  background: linear-gradient(135deg, #004ac6 0%, #4b41e1 100%);
+}
+
+.auth-recovery-input {
+  background: #dbe1ff;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.auth-recovery-input:focus {
+  box-shadow: 0 0 0 4px rgba(0, 74, 198, 0.12);
+}
+
+.auth-recovery-trust-card {
+  background: rgba(242, 243, 255, 0.72);
+}

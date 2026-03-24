@@ -7,7 +7,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 
-const authRoutes = new Set(["/login", "/register", "/admin/login"]);
+const fullscreenRoutes = new Set([
+  "/login",
+  "/register",
+  "/admin/login",
+  "/forgot-password",
+  "/forgot-password/sent",
+  "/reset-password",
+]);
+
+const sessionAwareAuthRoutes = new Set(["/login", "/register", "/admin/login"]);
 
 function FullscreenState({ message }: { message: string }) {
   return (
@@ -24,7 +33,8 @@ function AppContent({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
-  const isAuthRoute = authRoutes.has(router.pathname);
+  const isFullscreenRoute = fullscreenRoutes.has(router.pathname);
+  const isSessionAwareAuthRoute = sessionAwareAuthRoutes.has(router.pathname);
   const isProtectedAdminRoute =
     router.pathname.startsWith("/admin") && router.pathname !== "/admin/login";
 
@@ -47,10 +57,10 @@ function AppContent({ Component, pageProps }: AppProps) {
       return;
     }
 
-    if (isAuthRoute && user) {
+    if (isSessionAwareAuthRoute && user) {
       void router.replace(user.role === "ADMIN" ? "/admin" : "/");
     }
-  }, [isAuthRoute, isLoading, isProtectedAdminRoute, router, user]);
+  }, [isLoading, isProtectedAdminRoute, isSessionAwareAuthRoute, router, user]);
 
   if (isProtectedAdminRoute) {
     if (isLoading) {
@@ -72,7 +82,7 @@ function AppContent({ Component, pageProps }: AppProps) {
     );
   }
 
-  if (isAuthRoute) {
+  if (isSessionAwareAuthRoute) {
     if (isLoading) {
       return <FullscreenState message="Checking your session..." />;
     }
@@ -81,6 +91,10 @@ function AppContent({ Component, pageProps }: AppProps) {
       return <FullscreenState message="Redirecting to your dashboard..." />;
     }
 
+    return <Component {...pageProps} />;
+  }
+
+  if (isFullscreenRoute) {
     return <Component {...pageProps} />;
   }
 

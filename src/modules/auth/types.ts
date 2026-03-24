@@ -23,3 +23,22 @@ export interface LoginPayload {
   rememberMe?: boolean;
   scope?: UserRole;
 }
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  resendCooldownSeconds: number;
+}
+
+export interface ValidateResetTokenResponse {
+  valid: true;
+  expiresAt: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}

@@ -254,13 +254,10 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="name@bluewhale.com"
+                    placeholder="bwic@gmail.com"
                     className="w-full rounded-lg bg-[#dae2fd] px-4 py-3.5 text-[#131b2e] outline-none transition placeholder:text-[#8c93ad] focus:ring-2 focus:ring-[#004ac6]/20"
                     required
                   />
-                  <p className="text-[11px] font-medium tracking-wide text-[#737686]">
-                    Enter the email associated with your investor profile.
-                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -272,9 +269,12 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
                       Password
                     </label>
                     {!isRegister && (
-                      <span className="text-xs font-semibold text-[#004ac6]">
+                      <Link
+                        href="/forgot-password"
+                        className="text-xs font-semibold text-[#004ac6] hover:underline"
+                      >
                         Forgot Password?
-                      </span>
+                      </Link>
                     )}
                   </div>
 
@@ -339,11 +339,7 @@ export default function AuthPage({ mode, portal = "USER" }: AuthPageProps) {
             </div>
 
             <div className="absolute right-0 bottom-6 left-0 flex items-center justify-between px-6 text-[10px] font-bold tracking-[0.22em] text-[#b0b6d0] uppercase sm:px-8 lg:px-10">
-              <span>&copy; 2024 Blue Whale Investment</span>
-              <div className="flex gap-4">
-                <span>Privacy</span>
-                <span>Terms</span>
-              </div>
+              <span>&copy; 2026 Blue Whale Investment</span>
             </div>
           </section>
         </div>
