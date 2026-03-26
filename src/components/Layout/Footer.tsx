@@ -1,100 +1,85 @@
 import React from "react";
+import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faEnvelope,
+  faGlobe,
+  faPhone,
+} from "@fortawesome/free-solid-svg-icons";
+import { APP_ROUTES } from "@/config/routes";
 import { navItems } from "@/utils/navItems";
-import { contactInfo } from "@/utils/ContactInformation";
-import { socialMediaLinks } from "@/utils/SocialMediaLinks";
 
 const FooterSection: React.FC = () => {
   return (
-    <footer className="bg-gradient-to-tr from-slate-900 to-slate-800 text-white px-6 pt-12 pb-8">
-      {/* Main content */}
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-16 md:gap-12">
-        {/* Branding */}
-        <div className="md:flex-1 max-w-sm">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-3">
+    <footer className="border-t border-slate-200 bg-slate-50">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-6 py-16 sm:px-8 md:grid-cols-3 md:gap-16">
+        <div className="max-w-xs">
+          <h2 className="mb-6 font-auth-headline text-xl font-bold text-slate-900">
             Blue Whale Investment
           </h2>
-          <p className="text-slate-400 leading-relaxed">
-            Empowering investors with smart financial tools, expert strategies,
-            and long-term growth insights. We believe in building wealth that
-            lasts.
+          <p className="font-auth-body text-sm leading-relaxed text-slate-500">
+            Premium real estate investment platform specializing in verified
+            high-yield opportunities across Nepal.
           </p>
         </div>
 
-        {/* Quick Links */}
-        <div className="md:flex-1 max-w-[200px]">
-          <h3 className="text-xl font-semibold text-blue-300 mb-3">
+        <div>
+          <h5 className="mb-6 font-auth-headline text-xl font-bold text-slate-900">
             Quick Links
-          </h3>
-          <ul className="space-y-2">
+          </h5>
+          <ul className="space-y-4 font-auth-body text-sm text-slate-500">
             {navItems.map((item) => (
-              <li key={item.name}>
-                <a
+              <li key={item.path}>
+                <Link
                   href={item.path}
-                  className="text-slate-300 hover:text-blue-400 transition"
+                  className="underline decoration-2 underline-offset-4 transition-all hover:text-blue-500"
                 >
                   {item.name}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Contact Info */}
-        <div className="md:flex-1 max-w-xs">
-          <h3 className="text-xl font-semibold text-blue-300 mb-3">
-            Contact Us
-          </h3>
-          <address className="not-italic text-slate-300 leading-relaxed">
-            {contactInfo.address.street}
+        <div>
+          <h5 className="mb-6 font-auth-headline text-xl font-bold text-slate-900">
+            Office
+          </h5>
+          <p className="mb-4 font-auth-body text-sm leading-relaxed text-slate-500">
+            124 Lazimpat Road, Kathmandu
             <br />
-            {contactInfo.address.city}, {contactInfo.address.country}
-          </address>
-          <p className="mt-3 text-slate-300">
-            Email:{" "}
-            <a
-              href={`mailto:${contactInfo.email}`}
-              className="hover:text-blue-400"
-            >
-              {contactInfo.email}
-            </a>
-            <br />
-            Phone:{" "}
-            <a
-              href={`tel: ${contactInfo.phone}`}
-              className="hover:text-blue-400"
-            >
-              {contactInfo.phone}
-            </a>
+            Nepal
           </p>
+          <div className="flex gap-6 text-slate-400">
+            <a
+              href={APP_ROUTES.home}
+              aria-label="Website"
+              className="transition hover:text-slate-600"
+            >
+              <FontAwesomeIcon icon={faGlobe} className="text-xl" />
+            </a>
+            <a
+              href="mailto:bwic@gmail.com"
+              aria-label="Email"
+              className="transition hover:text-slate-600"
+            >
+              <FontAwesomeIcon icon={faEnvelope} className="text-xl" />
+            </a>
+            <a
+              href="tel:+9779851069535"
+              aria-label="Call"
+              className="transition hover:text-slate-600"
+            >
+              <FontAwesomeIcon icon={faPhone} className="text-xl" />
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Social Icons */}
-      <div className="mt-12 flex justify-center gap-6">
-        {socialMediaLinks.map((social) => (
-          <a
-            key={social.name}
-            href={social.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={social.name}
-            className="group w-12 h-12 flex items-center justify-center bg-slate-700 rounded-full hover:bg-blue-500 transition transform hover:scale-110"
-          >
-            <svg
-              className="w-6 h-6 text-white group-hover:text-white"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d={social.icon} />
-            </svg>
-          </a>
-        ))}
-      </div>
-
-      {/* Divider & Copyright */}
-      <div className="mt-14 border-t border-slate-700 pt-6 text-center text-xs text-slate-500">
-        &copy; {new Date().getFullYear()} Blue Whale Investment. All rights
-        reserved.
+      <div className="mx-auto max-w-6xl border-t border-slate-200 px-6 py-8 sm:px-8">
+        <p className="text-center font-auth-body text-sm text-slate-500">
+          &copy; 2026 Blue Whale Investment.
+        </p>
       </div>
     </footer>
   );

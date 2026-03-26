@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { navItems as defaultNavItems, NavbarItem } from "@/utils/navItems";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowRightFromBracket,
+  faGauge,
+} from "@fortawesome/free-solid-svg-icons";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { defaultBrand } from "@/utils/brand";
@@ -36,7 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav className="bg-white text-black shadow-md fixed top-0 left-0 w-full z-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Brand */}
           <div className="flex items-center space-x-2">
@@ -48,13 +53,8 @@ const Navbar: React.FC<NavbarProps> = ({
                   className="w-8 h-8"
                 />
               ) : (
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                  {brand.name[0]}
-                </div>
+                <span className="text-lg font-semibold">{brand.name}</span>
               )}
-            </Link>
-            <Link href={APP_ROUTES.home}>
-              <span className="text-lg font-semibold">{brand.name}</span>
             </Link>
           </div>
 
@@ -92,17 +92,22 @@ const Navbar: React.FC<NavbarProps> = ({
                 {isAdmin && (
                   <Link
                     href={APP_ROUTES.adminDashboard}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:text-blue-600"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                    title="Open dashboard"
                   >
-                    Admin Panel
+                    <FontAwesomeIcon icon={faGauge} className="text-sm" />
+                    <span>Dashboard</span>
                   </Link>
                 )}
                 <button
                   type="button"
                   onClick={() => void handleLogout()}
-                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="flex items-center gap-2 rounded-full px-2 py-2 text-sm font-semibold text-white transition "
                 >
-                  Logout
+                  <FontAwesomeIcon
+                    icon={faArrowRightFromBracket}
+                    className="text-xl text-black cursor-pointer"
+                  />
                 </button>
               </>
             )}
@@ -200,10 +205,11 @@ const Navbar: React.FC<NavbarProps> = ({
                     <li>
                       <Link
                         href={APP_ROUTES.adminDashboard}
-                        className="block rounded-md py-2 px-3 text-gray-700 hover:bg-gray-100"
+                        className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        Admin Panel
+                        <FontAwesomeIcon icon={faGauge} className="text-sm" />
+                        <span>Dashboard</span>
                       </Link>
                     </li>
                   )}
@@ -211,9 +217,9 @@ const Navbar: React.FC<NavbarProps> = ({
                     <button
                       type="button"
                       onClick={() => void handleLogout()}
-                      className="block w-full rounded-md bg-slate-900 py-2 px-3 text-left font-medium text-white"
+                      className="flex w-full items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-left font-medium text-white"
                     >
-                      Logout
+                      <span>Logout</span>
                     </button>
                   </li>
                 </>
