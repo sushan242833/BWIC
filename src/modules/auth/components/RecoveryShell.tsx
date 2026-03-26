@@ -11,7 +11,6 @@ interface RecoveryShellProps {
 
 const footerLinks = [
   { href: APP_ROUTES.about, label: "About" },
-  { href: APP_ROUTES.services, label: "Services" },
   { href: APP_ROUTES.properties, label: "Properties" },
   { href: APP_ROUTES.contact, label: "Contact" },
 ];

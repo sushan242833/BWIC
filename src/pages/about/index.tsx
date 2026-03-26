@@ -1,12 +1,13 @@
+import Head from "next/head";
 import AboutPage from "@/components/About";
-import React from "react";
 
-const index = () => {
+export default function About() {
   return (
-    <div>
+    <>
+      <Head>
+        <title>About | Blue Whale Investment</title>
+      </Head>
       <AboutPage />
-    </div>
+    </>
   );
-};
-
-export default index;
+}

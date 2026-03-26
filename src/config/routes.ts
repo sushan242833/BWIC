@@ -1,7 +1,6 @@
 export const APP_ROUTES = {
   home: "/",
   about: "/about",
-  services: "/services",
   properties: "/properties",
   propertyDetail: (id: string | number) => `/properties/${id}`,
   recommendations: "/recommendations",
