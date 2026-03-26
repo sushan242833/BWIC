@@ -5,6 +5,14 @@ export const PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS = 150;
 export const PROPERTY_IMAGE_UPLOAD_LIMIT = 10;
 export const PROPERTY_IMAGE_MAX_FILE_SIZE_MB = 5;
 export const PROPERTY_DEFAULT_PAGE_SIZE = 9;
+export const DEFAULT_HIGHWAY_DISTANCE_KM = 0;
+export const ROI_OPTIONS = [
+  { label: "6% +", value: "6" },
+  { label: "8% +", value: "8" },
+  { label: "10% +", value: "10" },
+  { label: "12% +", value: "12" },
+  { label: "15% +", value: "15" },
+] as const;
 
 export const PROPERTY_AREA_NEPALI_PATTERN = /^\d+-\d+-\d+-\d+(\.\d+)?$/;
 export const PROPERTY_AREA_NEPALI_FORMAT_HINT = "0-0-0-0.0";
@@ -13,16 +21,10 @@ export const PROPERTY_STATUS_OPTIONS = [
   { value: "Available", label: "Available" },
   { value: "Pending", label: "Pending" },
   { value: "Sold", label: "Sold" },
-  { value: "Rented", label: "Rented" },
 ] as const;
 
 export type PropertyStatusValue =
   (typeof PROPERTY_STATUS_OPTIONS)[number]["value"];
-
-export const PROPERTY_FILTER_STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  ...PROPERTY_STATUS_OPTIONS,
-] as const;
 
 export const PROPERTY_SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
@@ -32,8 +34,6 @@ export const PROPERTY_SORT_OPTIONS = [
 ] as const;
 
 export type PropertySortValue = (typeof PROPERTY_SORT_OPTIONS)[number]["value"];
-
-export const PROPERTY_LIST_PAGE_SIZE_OPTIONS = [6, 9, 12, 18] as const;
 
 export const PROPERTY_FORM_TEXT = {
   addTitle: "Add New Property",

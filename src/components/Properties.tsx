@@ -1,7 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/router";
+import {
+  BadgeCheck,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  SearchX,
+} from "lucide-react";
 import { capitalize } from "@/utils/Capitalize";
-import { contactInfo } from "@/utils/ContactInformation";
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
@@ -12,24 +25,16 @@ import {
 } from "@/modules/locations/api";
 import { getProperties } from "@/modules/properties/api";
 import {
-  countActivePropertyFilters,
   defaultPropertyFilters,
   defaultPropertySort,
-  PROPERTY_FILTER_STATUS_OPTIONS,
-  PROPERTY_SORT_OPTIONS,
-  PropertyFilters,
-  PropertySortValue,
+  type PropertyFilters,
 } from "@/modules/properties/filters";
 import {
-  PROPERTY_DEFAULT_PAGE_SIZE,
-  PROPERTY_FILTER_TEXT,
-  PROPERTY_LIST_PAGE_SIZE_OPTIONS,
+  DEFAULT_HIGHWAY_DISTANCE_KM,
   PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+  PROPERTY_DEFAULT_PAGE_SIZE,
+  ROI_OPTIONS,
 } from "@/modules/properties/constants";
-import {
-  formatPropertyStatus,
-  getPropertyStatusTextClass,
-} from "@/modules/properties/status";
 import type {
   LocationSuggestion,
   PropertySummary,
@@ -46,6 +51,114 @@ const defaultPagination = {
   hasPrev: false,
 };
 
+const parseNumericValue = (value?: string | number | null): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/[^0-9.]/g, "");
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatNumber = (value?: string | number | null): string => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return typeof value === "string" ? value : "N/A";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: parsed % 1 === 0 ? 0 : 1,
+    minimumFractionDigits: parsed % 1 === 0 ? 0 : 1,
+  }).format(parsed);
+};
+
+const formatCurrency = (value?: string | number | null): string => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return value ? `NPR ${value}` : "NPR N/A";
+  }
+
+  return `NPR ${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(parsed)}`;
+};
+
+const formatPercent = (value?: string | number | null): string => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return "N/A";
+  }
+
+  return `${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: parsed % 1 === 0 ? 0 : 1,
+    minimumFractionDigits: parsed % 1 === 0 ? 0 : 1,
+  }).format(parsed)}%`;
+};
+
+const getAreaDisplay = (
+  property: PropertySummary,
+): { value: string; unit: string } => {
+  const nepaliArea = property.areaNepali?.trim();
+
+  if (nepaliArea) {
+    const match = nepaliArea.match(/^([\d.,]+)\s*(.*)$/);
+    if (match) {
+      return {
+        value: match[1],
+        unit: match[2] || "",
+      };
+    }
+
+    return {
+      value: nepaliArea,
+      unit: "",
+    };
+  }
+
+  return {
+    value: formatNumber(property.area),
+    unit: "sq.ft",
+  };
+};
+
+const getMetricLabel = (property: PropertySummary): string => {
+  const categoryName = property.category?.name?.toLowerCase() ?? "";
+  return categoryName.includes("land") ? "Appreciation" : "Investment ROI";
+};
+
+const getCategoryLabel = (property: PropertySummary): string =>
+  capitalize(property.category?.name ?? "Investment");
+
+const buildPaginationItems = (currentPage: number, totalPages: number) => {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, "...", totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "...", currentPage, currentPage + 1, "...", totalPages];
+};
+
+const fieldClassName =
+  "h-11 w-full rounded-xl border border-transparent bg-[#eef0ff] px-4 text-[14px] font-medium text-[#131b2e] outline-none transition placeholder:text-[#6a6f82] focus:border-[#cbd5ff] focus:bg-white focus:ring-4 focus:ring-[#004ac6]/8";
+
+const selectClassName = `${fieldClassName} appearance-none pr-11`;
+
 const Properties = () => {
   const router = useRouter();
   const propertyListRef = useRef<HTMLDivElement>(null);
@@ -58,11 +171,10 @@ const Properties = () => {
   const [appliedFilters, setAppliedFilters] = useState<PropertyFilters>(
     defaultPropertyFilters,
   );
-  const [sort, setSort] = useState<PropertySortValue>(defaultPropertySort);
   const [pagination, setPagination] = useState(defaultPagination);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
     LocationSuggestion[]
@@ -70,18 +182,23 @@ const Properties = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
   const [selectedLocationPlaceId, setSelectedLocationPlaceId] = useState("");
+  const [highwayDistanceKm, setHighwayDistanceKm] = useState(
+    DEFAULT_HIGHWAY_DISTANCE_KM,
+  );
+
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const data = await getCategories();
         setCategories(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Failed to fetch categories:", err);
+      } catch (fetchError) {
+        console.error("Failed to fetch categories:", fetchError);
       }
     };
 
-    fetchCategories();
+    void fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -89,9 +206,10 @@ const Properties = () => {
       try {
         setLoading(true);
         setError("");
+
         const response = (await getProperties({
           ...appliedFilters,
-          sort,
+          sort: defaultPropertySort,
           page: pagination.page,
           limit: pagination.limit,
         })) as PropertiesResponse;
@@ -106,8 +224,8 @@ const Properties = () => {
                 limit: pagination.limit,
               },
         );
-      } catch (err) {
-        console.error("Failed to fetch properties:", err);
+      } catch (fetchError) {
+        console.error("Failed to fetch properties:", fetchError);
         setError("Failed to load properties.");
         setProperties([]);
       } finally {
@@ -115,8 +233,8 @@ const Properties = () => {
       }
     };
 
-    fetchProperties();
-  }, [appliedFilters, sort, pagination.page, pagination.limit]);
+    void fetchProperties();
+  }, [appliedFilters, pagination.page, pagination.limit]);
 
   useEffect(() => {
     if (!shouldFetchLocationSuggestions(locationQuery)) {
@@ -124,7 +242,7 @@ const Properties = () => {
       return;
     }
 
-    const timeout = setTimeout(async () => {
+    const timeout = window.setTimeout(async () => {
       try {
         setLocationLoading(true);
         const suggestions = await getLocationSuggestions(locationQuery);
@@ -137,403 +255,553 @@ const Properties = () => {
       }
     }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
-    return () => clearTimeout(timeout);
+    return () => window.clearTimeout(timeout);
   }, [locationQuery]);
 
+  const displayedProperties = useMemo(() => {
+    const normalizedTerm = deferredSearchTerm.trim().toLowerCase();
+
+    if (!normalizedTerm) {
+      return properties;
+    }
+
+    return properties.filter((property) => {
+      const searchableFields = [
+        String(property.id),
+        property.title,
+        property.location,
+        property.description,
+        property.category?.name ?? "",
+      ];
+
+      return searchableFields.some((value) =>
+        value.toLowerCase().includes(normalizedTerm),
+      );
+    });
+  }, [deferredSearchTerm, properties]);
+
+  const paginationItems = useMemo(
+    () => buildPaginationItems(pagination.page, pagination.totalPages),
+    [pagination.page, pagination.totalPages],
+  );
+
   const handleFilterChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = event.target;
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [name]: value,
+    }));
   };
 
   const handleLocationQueryChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const nextQuery = e.target.value;
+    const nextQuery = event.target.value;
     setLocationQuery(nextQuery);
-    setIsLocationDropdownOpen(true);
     setSelectedLocationPlaceId("");
-    setFilters((prev) => ({ ...prev, location: nextQuery }));
+    setIsLocationDropdownOpen(true);
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      location: nextQuery,
+    }));
   };
 
   const handleLocationSelect = (suggestion: LocationSuggestion) => {
     setSelectedLocationPlaceId(suggestion.placeId);
     setLocationQuery(suggestion.description);
-    setFilters((prev) => ({ ...prev, location: suggestion.description }));
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      location: suggestion.description,
+    }));
   };
 
-  const applyFilters = () => {
-    setPagination((prev) => ({ ...prev, page: 1 }));
+  const handleHighwayDistanceChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextKm = Number(event.target.value);
+    setHighwayDistanceKm(nextKm);
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      maxDistanceFromHighway: String(Math.round(nextKm * 1000)),
+    }));
+  };
+
+  const handleApplyFilters = () => {
+    setPagination((currentPagination) => ({
+      ...currentPagination,
+      page: 1,
+    }));
     setAppliedFilters(filters);
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowMobileFilters(false);
   };
 
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     setFilters(defaultPropertyFilters);
     setAppliedFilters(defaultPropertyFilters);
-    setSort(defaultPropertySort);
+    setSearchTerm("");
     setLocationQuery("");
     setLocationSuggestions([]);
-    setSelectedLocationPlaceId("");
     setIsLocationDropdownOpen(false);
-    setPagination((prev) => ({ ...prev, page: 1 }));
+    setSelectedLocationPlaceId("");
+    setHighwayDistanceKm(DEFAULT_HIGHWAY_DISTANCE_KM);
+    setPagination((currentPagination) => ({
+      ...currentPagination,
+      page: 1,
+      limit: PROPERTY_DEFAULT_PAGE_SIZE,
+    }));
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextLimit = Number(e.target.value);
-    setPagination((prev) => ({ ...prev, page: 1, limit: nextLimit }));
-  };
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > pagination.totalPages || page === pagination.page) {
+      return;
+    }
 
-  const handleScrollToProperties = () => {
+    setPagination((currentPagination) => ({
+      ...currentPagination,
+      page,
+    }));
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const activeFilterCount = useMemo(() => {
-    return countActivePropertyFilters(appliedFilters);
-  }, [appliedFilters]);
+  const showEmptyState = !loading && !error && displayedProperties.length === 0;
 
   return (
-    <section className="bg-slate-800 py-16 px-4">
-      <div className="text-center mb-10 max-w-4xl mx-auto">
-        <h2 className="text-5xl font-extrabold text-white mb-4 leading-tight">
-          Discover Profitable{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">
-            Investment Properties
-          </span>{" "}
-          in Nepal
-        </h2>
-        <p className="text-slate-400 text-lg">
-          Use real filters for location, price, ROI, area, and highway distance.
-        </p>
-      </div>
-
-      <div className="max-w-7xl mx-auto mb-8">
-        <button
-          onClick={() => setShowMobileFilters((prev) => !prev)}
-          className="md:hidden w-full bg-slate-700 text-white px-4 py-3 rounded-lg mb-4"
-        >
-          {showMobileFilters ? "Hide Filters" : "Show Filters"}
-        </button>
-
-        <div
-          className={`bg-slate-900/80 border border-slate-700 rounded-xl p-4 md:p-6 ${
-            showMobileFilters ? "block" : "hidden md:block"
-          }`}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div className="relative">
-              <input
-                name="location"
-                placeholder={PROPERTY_FILTER_TEXT.locationPlaceholder}
-                value={locationQuery}
-                onChange={handleLocationQueryChange}
-                onFocus={() => setIsLocationDropdownOpen(true)}
-                onBlur={() =>
-                  setTimeout(
-                    () => setIsLocationDropdownOpen(false),
-                    PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
-                  )
-                }
-                className="w-full px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-              />
-
-              {isLocationDropdownOpen &&
-                shouldFetchLocationSuggestions(locationQuery) && (
-                  <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-600 bg-slate-900 shadow-lg max-h-64 overflow-auto">
-                    {locationLoading && (
-                      <div className="px-3 py-2 text-sm text-slate-300">
-                        Loading suggestions...
-                      </div>
-                    )}
-
-                    {!locationLoading && locationSuggestions.length === 0 && (
-                      <div className="px-3 py-2 text-sm text-slate-400">
-                        No locations found
-                      </div>
-                    )}
-
-                    {!locationLoading &&
-                      locationSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.placeId}
-                          type="button"
-                          onClick={() => handleLocationSelect(suggestion)}
-                          className={`block w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700 ${
-                            selectedLocationPlaceId === suggestion.placeId
-                              ? "bg-slate-700"
-                              : ""
-                          }`}
-                        >
-                          {suggestion.description}
-                        </button>
-                      ))}
-                  </div>
-                )}
-            </div>
-
-            <select
-              name="categoryId"
-              value={filters.categoryId}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            >
-              <option value="">
-                {PROPERTY_FILTER_TEXT.allCategoriesLabel}
-              </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {capitalize(category.name)}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              name="minPrice"
-              placeholder={PROPERTY_FILTER_TEXT.minPricePlaceholder}
-              value={filters.minPrice}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
-
-            <input
-              type="number"
-              name="maxPrice"
-              placeholder={PROPERTY_FILTER_TEXT.maxPricePlaceholder}
-              value={filters.maxPrice}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
-
-            <input
-              type="number"
-              step="0.01"
-              name="minRoi"
-              placeholder={PROPERTY_FILTER_TEXT.minRoiPlaceholder}
-              value={filters.minRoi}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
-
-            <input
-              type="number"
-              name="minArea"
-              placeholder={PROPERTY_FILTER_TEXT.minAreaPlaceholder}
-              value={filters.minArea}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
-
-            <input
-              type="number"
-              name="maxDistanceFromHighway"
-              placeholder={PROPERTY_FILTER_TEXT.maxDistancePlaceholder}
-              value={filters.maxDistanceFromHighway}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            />
-
-            <select
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-            >
-              {PROPERTY_FILTER_STATUS_OPTIONS.map((option) => (
-                <option key={option.value || option.label} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mt-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as PropertySortValue)}
-                className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-              >
-                {PROPERTY_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={pagination.limit}
-                onChange={handleLimitChange}
-                className="px-3 py-2 rounded-md bg-slate-800 text-white border border-slate-600"
-              >
-                {PROPERTY_LIST_PAGE_SIZE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option} / page
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={applyFilters}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-              >
-                {PROPERTY_FILTER_TEXT.applyButton}
-              </button>
-              <button
-                onClick={clearFilters}
-                className="border border-slate-500 text-white px-4 py-2 rounded-md hover:bg-slate-700 transition"
-              >
-                {PROPERTY_FILTER_TEXT.clearButton}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 text-sm text-slate-300">
-          Active filters: {activeFilterCount} | Total results:{" "}
-          {pagination.total}
-        </div>
-      </div>
-
-      <div
-        ref={propertyListRef}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
-      >
-        {loading && (
-          <div className="text-white col-span-full text-center py-10">
-            Loading properties...
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="text-red-400 col-span-full text-center py-10">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && properties.length === 0 && (
-          <div className="text-slate-300 col-span-full text-center py-10">
-            No properties found for selected filters.
-          </div>
-        )}
-
-        {!loading &&
-          !error &&
-          properties.map((property) => (
-            <div
-              key={property.id}
-              onClick={() =>
-                router.push(APP_ROUTES.propertyDetail(property.id))
-              }
-              className="cursor-pointer bg-white rounded-2xl shadow-md hover:shadow-xl transition-all p-6 flex flex-col"
-            >
-              {property.images?.length > 0 && (
-                <img
-                  src={assetUrl(property.images[0])}
-                  alt={property.title}
-                  className="w-full h-52 object-cover rounded-xl mb-4"
-                />
-              )}
-              <h3 className="text-lg font-semibold text-slate-800 mb-1">
-                {property.title}
-              </h3>
-              <p className="text-sm text-slate-500 mb-2">{property.location}</p>
-              <p className="text-slate-600 text-sm mb-4 truncate">
-                {property.description}
+    <section className="bg-[radial-gradient(circle_at_top_left,rgba(75,65,225,0.08),transparent_32%),linear-gradient(180deg,#f7f6ff_0%,#faf8ff_100%)] font-auth-body text-[#131b2e]">
+      <div className="mx-auto max-w-[1280px] px-6 pb-20 pt-12 md:px-8 md:pb-24 md:pt-16">
+        <header className="mb-10 md:mb-12">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-[760px]">
+              <h1 className="font-auth-headline text-[44px] font-bold leading-[0.94] tracking-[-0.045em] text-[#10182c] sm:text-[56px] lg:text-[64px]">
+                <span className="block">Prime Real Estate</span>
+                <span className="block text-[#0b46cf]">
+                  Investment Opportunities.
+                </span>
+              </h1>
+              <p className="mt-5 max-w-[700px] text-[17px] leading-[1.7] text-[#2f3446] md:text-[18px]">
+                Discover high-yield assets in Nepal&apos;s emerging economic
+                corridors. From Kathmandu&apos;s commercial hubs to
+                Pokhara&apos;s luxury hospitality zones, we curate the
+                nation&apos;s most promising architectural milestones.
               </p>
-              <div className="grid grid-cols-2 gap-4 text-sm text-slate-700 mt-auto">
-                <div>
-                  <p className="font-medium">NRs. {property.price}</p>
-                  <p className="text-xs text-slate-500">Price </p>
-                </div>
-                <div>
-                  <p className="font-medium">{property.roi}%</p>
-                  <p className="text-xs text-slate-500">Expected ROI</p>
-                </div>
-                <div>
-                  <p className="font-medium">{property.area}</p>
-                  <p className="text-xs text-slate-500">Area (sq ft)</p>
-                </div>
-                {property.areaNepali && (
-                  <div>
-                    <p className="font-medium">{property.areaNepali}</p>
-                    <p className="text-xs text-slate-500">Area (R-A-P-D)</p>
-                  </div>
-                )}
-                {property.distanceFromHighway !== undefined && (
-                  <div>
-                    <p className="font-medium">
-                      {property.distanceFromHighway}m
-                    </p>
-                    <p className="text-xs text-slate-500">From Highway</p>
-                  </div>
-                )}
-                <div>
-                  <p
-                    className={`font-medium ${getPropertyStatusTextClass(
-                      property.status,
-                    )}`}
-                  >
-                    {formatPropertyStatus(property.status)}
-                  </p>
-                  <p className="text-xs text-slate-500">Status</p>
-                </div>
+            </div>
+
+            <div className="w-full lg:max-w-[320px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0b46cf]" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search property name, ID, or keywords..."
+                  className="h-11 w-full rounded-2xl border border-[#e6e8f2] bg-white pl-11 pr-4 text-[14px] text-[#131b2e] shadow-[0_10px_26px_rgba(19,27,46,0.05)] outline-none transition placeholder:text-[#8a8fa1] focus:border-[#bfd0ff] focus:ring-4 focus:ring-[#004ac6]/10"
+                />
               </div>
             </div>
-          ))}
-      </div>
+          </div>
+        </header>
 
-      <div className="max-w-7xl mx-auto mt-10 flex items-center justify-center gap-4">
-        <button
-          onClick={() =>
-            setPagination((prev) => ({
-              ...prev,
-              page: Math.max(1, prev.page - 1),
-            }))
-          }
-          disabled={!pagination.hasPrev}
-          className="px-4 py-2 rounded-md border border-slate-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {PROPERTY_FILTER_TEXT.previousButton}
-        </button>
-        <p className="text-slate-300">
-          Page {pagination.page} of {pagination.totalPages}
-        </p>
-        <button
-          onClick={() =>
-            setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-          }
-          disabled={!pagination.hasNext}
-          className="px-4 py-2 rounded-md border border-slate-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {PROPERTY_FILTER_TEXT.nextButton}
-        </button>
-      </div>
+        <section className="mb-10 rounded-[20px] border border-[#ebe9f6] bg-white/90 p-6 shadow-[0_18px_40px_rgba(19,27,46,0.05)] backdrop-blur-sm md:mb-12 md:p-7">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-2 xl:col-span-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                Location
+              </label>
+              <div className="relative">
+                <input
+                  name="location"
+                  value={locationQuery}
+                  onChange={handleLocationQueryChange}
+                  onFocus={() => setIsLocationDropdownOpen(true)}
+                  onBlur={() =>
+                    window.setTimeout(
+                      () => setIsLocationDropdownOpen(false),
+                      PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+                    )
+                  }
+                  placeholder="All Locations"
+                  className={fieldClassName}
+                />
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
 
-      <div className="mt-20 text-center">
-        <h3 className="text-2xl font-bold text-white mb-2">Ready to Invest?</h3>
-        <p className="text-slate-400 max-w-xl mx-auto mb-6">
-          Schedule a call with our experts or view all available listings to get
-          started.
-        </p>
-        <div className="flex justify-center gap-4 flex-wrap">
-          <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer">
-            <a href={`tel: ${contactInfo.phone}`}>Make a Call</a>
-          </button>
-          <button
-            onClick={handleScrollToProperties}
-            className="border border-slate-300 text-white px-6 py-2 rounded-lg hover:bg-slate-700 transition cursor-pointer"
-          >
-            View Properties
-          </button>
+                {isLocationDropdownOpen &&
+                  shouldFetchLocationSuggestions(locationQuery) && (
+                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-[#e3e6f3] bg-white p-2 shadow-[0_16px_30px_rgba(19,27,46,0.08)]">
+                      {locationLoading && (
+                        <div className="px-3 py-2 text-sm text-[#5f6475]">
+                          Loading suggestions...
+                        </div>
+                      )}
+
+                      {!locationLoading && locationSuggestions.length === 0 && (
+                        <div className="px-3 py-2 text-sm text-[#5f6475]">
+                          No locations found
+                        </div>
+                      )}
+
+                      {!locationLoading &&
+                        locationSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.placeId}
+                            type="button"
+                            onClick={() => handleLocationSelect(suggestion)}
+                            className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                              selectedLocationPlaceId === suggestion.placeId
+                                ? "bg-[#eef0ff] text-[#0b46cf]"
+                                : "text-[#131b2e] hover:bg-[#f5f6ff]"
+                            }`}
+                          >
+                            {suggestion.description}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                Category
+              </label>
+              <div className="relative">
+                <select
+                  name="categoryId"
+                  value={filters.categoryId}
+                  onChange={handleFilterChange}
+                  className={selectClassName}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {capitalize(category.name)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
+              </div>
+            </div>
+
+            <div className="space-y-2 xl:col-span-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                Price (NPR)
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  name="minPrice"
+                  value={filters.minPrice}
+                  onChange={handleFilterChange}
+                  placeholder="Min"
+                  className={fieldClassName}
+                />
+                <input
+                  type="number"
+                  name="maxPrice"
+                  value={filters.maxPrice}
+                  onChange={handleFilterChange}
+                  placeholder="Max"
+                  className={fieldClassName}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                ROI (%)
+              </label>
+              <div className="relative">
+                <select
+                  name="minRoi"
+                  value={filters.minRoi}
+                  onChange={handleFilterChange}
+                  className={selectClassName}
+                >
+                  <option value="">Any ROI</option>
+                  {ROI_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-7 grid grid-cols-1 items-end gap-5 border-t border-[#eceffc] pt-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_auto]">
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                Minimum Area (Sq. Ft.)
+              </label>
+              <input
+                type="number"
+                name="minArea"
+                value={filters.minArea}
+                onChange={handleFilterChange}
+                placeholder="e.g. 1500"
+                className={fieldClassName}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                  Highway Proximity (km)
+                </label>
+                <span className="rounded-full bg-[#eef0ff] px-3 py-1 text-[11px] font-semibold text-[#0b46cf]">
+                  {highwayDistanceKm} km
+                </span>
+              </div>
+              <div className="flex h-11 items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={highwayDistanceKm}
+                  onChange={handleHighwayDistanceChange}
+                  aria-label="Highway proximity in kilometres"
+                  className="properties-range w-full"
+                  style={{
+                    background: `linear-gradient(90deg, #0b46cf 0%, #0b46cf ${
+                      (highwayDistanceKm / 10) * 100
+                    }%, #dbe1ff ${(highwayDistanceKm / 10) * 100}%, #dbe1ff 100%)`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:w-[320px]">
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="h-11 rounded-xl bg-[#dbe1ff] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-[#0b46cf] transition hover:bg-[#cbd5ff]"
+              >
+                Clear Filters
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="h-11 rounded-xl bg-[linear-gradient(135deg,#0b46cf_0%,#4b41e1_100%)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_20px_rgba(11,70,207,0.22)] transition hover:brightness-[1.03]"
+              >
+                Apply Search
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div
+          ref={propertyListRef}
+          className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3"
+        >
+          {loading &&
+            Array.from({ length: PROPERTY_DEFAULT_PAGE_SIZE }, (_, index) => (
+              <div
+                key={`property-skeleton-${index}`}
+                className="overflow-hidden rounded-[18px] border border-[#e7e8f1] bg-white/70 shadow-[0_10px_28px_rgba(19,27,46,0.04)]"
+              >
+                <div className="h-[214px] animate-pulse bg-[#e6eaff]" />
+                <div className="space-y-4 p-5">
+                  <div className="h-3 w-28 animate-pulse rounded-full bg-[#e6eaff]" />
+                  <div className="h-7 w-2/3 animate-pulse rounded-xl bg-[#e6eaff]" />
+                  <div className="grid grid-cols-2 gap-4 border-y border-[#edf0fb] py-5">
+                    <div className="space-y-3">
+                      <div className="h-3 w-20 animate-pulse rounded-full bg-[#e6eaff]" />
+                      <div className="h-6 w-16 animate-pulse rounded-xl bg-[#e6eaff]" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-3 w-20 animate-pulse rounded-full bg-[#e6eaff]" />
+                      <div className="h-6 w-20 animate-pulse rounded-xl bg-[#e6eaff]" />
+                    </div>
+                  </div>
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="space-y-3">
+                      <div className="h-3 w-24 animate-pulse rounded-full bg-[#e6eaff]" />
+                      <div className="h-7 w-40 animate-pulse rounded-xl bg-[#e6eaff]" />
+                    </div>
+                    <div className="h-4 w-24 animate-pulse rounded-full bg-[#e6eaff]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+          {!loading && error && (
+            <div className="col-span-full rounded-[20px] border border-[#f0d3d3] bg-white px-6 py-14 text-center text-[#b42318] shadow-[0_12px_28px_rgba(19,27,46,0.03)]">
+              {error}
+            </div>
+          )}
+
+          {!loading &&
+            !error &&
+            displayedProperties.map((property, index) => {
+              const areaDisplay = getAreaDisplay(property);
+              const primaryImage =
+                property.primaryImage ?? property.images?.[0];
+
+              return (
+                <article
+                  key={property.id}
+                  onClick={() =>
+                    router.push(APP_ROUTES.propertyDetail(property.id))
+                  }
+                  className="group cursor-pointer overflow-hidden rounded-[18px] border border-[#e7e8f1] bg-white shadow-[0_10px_28px_rgba(19,27,46,0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(19,27,46,0.08)]"
+                >
+                  <div className="relative h-[214px] overflow-hidden bg-[#dfe5ff]">
+                    {primaryImage ? (
+                      <img
+                        src={assetUrl(primaryImage)}
+                        alt={property.title}
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#dbe1ff_0%,#eef1ff_100%)]">
+                        <span className="font-auth-headline text-2xl font-bold text-[#0b46cf]">
+                          {property.title.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="absolute left-4 top-4 rounded-full bg-[linear-gradient(135deg,#5a53f5_0%,#726bff_100%)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(75,65,225,0.18)]">
+                      {getCategoryLabel(property)}
+                    </div>
+
+                    {(index === 0 || index === 2) && (
+                      <div className="absolute right-4 top-4 rounded-full bg-white/95 p-2 text-[#0b46cf] shadow-[0_10px_20px_rgba(19,27,46,0.12)]">
+                        <BadgeCheck className="h-4 w-4 fill-current" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#0b46cf]">
+                      {property.location}
+                    </p>
+                    <h3 className="mt-2 font-auth-headline text-[19px] font-bold leading-tight text-[#131b2e] transition-colors group-hover:text-[#0b46cf] sm:text-[20px]">
+                      {property.title}
+                    </h3>
+
+                    <div className="mt-5 grid grid-cols-2 gap-4 border-y border-[#edf0fb] py-5">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#72778a]">
+                          {getMetricLabel(property)}
+                        </p>
+                        <p className="mt-2 text-[18px] font-semibold text-[#131b2e]">
+                          {formatPercent(property.roi)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#72778a]">
+                          Total Area
+                        </p>
+                        <p className="mt-2 text-[18px] font-semibold text-[#131b2e]">
+                          {areaDisplay.value}
+                          {areaDisplay.unit && (
+                            <span className="ml-1 text-[14px] font-medium text-[#5b6174]">
+                              {areaDisplay.unit}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex items-end justify-between gap-5">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#72778a]">
+                          Investment Ask
+                        </p>
+                        <p className="mt-2 text-[19px] font-semibold text-[#0b46cf] sm:text-[20px]">
+                          {formatCurrency(property.price)}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void router.push(
+                            APP_ROUTES.propertyDetail(property.id),
+                          );
+                        }}
+                        className="border-b border-[#c8d4ff] pb-1 text-[12px] font-bold uppercase tracking-[0.14em] text-[#0b46cf] transition hover:border-[#0b46cf]"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+
+          {showEmptyState && (
+            <div className="col-span-full flex flex-col items-center rounded-[24px] border border-dashed border-[#d8def6] bg-white/80 px-6 py-16 text-center shadow-[0_12px_28px_rgba(19,27,46,0.03)]">
+              <div className="rounded-full bg-[#eef1ff] p-4 text-[#9aa2c8]">
+                <SearchX className="h-8 w-8" />
+              </div>
+              <h3 className="mt-6 font-auth-headline text-[28px] font-bold text-[#131b2e]">
+                No properties match your criteria
+              </h3>
+              <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-[#5b6174]">
+                Try adjusting your filters or search for a different location.
+              </p>
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="mt-8 border-b border-[#0b46cf] pb-1 text-[12px] font-bold uppercase tracking-[0.18em] text-[#0b46cf]"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
         </div>
+
+        {!loading && !error && pagination.totalPages > 1 && (
+          <nav className="mt-16 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrev}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#687086] shadow-[0_6px_16px_rgba(19,27,46,0.04)] transition hover:bg-[#eef1ff] disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            {paginationItems.map((item, index) =>
+              typeof item === "string" ? (
+                <span key={`ellipsis-${index}`} className="px-2 text-[#687086]">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => handlePageChange(item)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold transition ${
+                    item === pagination.page
+                      ? "bg-[#0b46cf] text-white shadow-[0_10px_20px_rgba(11,70,207,0.22)]"
+                      : "bg-white text-[#131b2e] shadow-[0_6px_16px_rgba(19,27,46,0.04)] hover:bg-[#eef1ff]"
+                  }`}
+                >
+                  {item}
+                </button>
+              ),
+            )}
+
+            <button
+              type="button"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNext}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#687086] shadow-[0_6px_16px_rgba(19,27,46,0.04)] transition hover:bg-[#eef1ff] disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </nav>
+        )}
       </div>
     </section>
   );

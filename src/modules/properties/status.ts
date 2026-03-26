@@ -41,8 +41,6 @@ export const getPropertyStatusTextClass = (status?: string | null): string => {
       return "text-yellow-500";
     case "Sold":
       return "text-red-600";
-    case "Rented":
-      return "text-blue-600";
     default:
       return "text-slate-600";
   }
@@ -56,8 +54,6 @@ export const getPropertyStatusBadgeClass = (status?: string | null): string => {
       return "bg-yellow-100 text-yellow-800";
     case "Sold":
       return "bg-red-100 text-red-800";
-    case "Rented":
-      return "bg-blue-100 text-blue-800";
     default:
       return "bg-gray-100 text-gray-800";
   }

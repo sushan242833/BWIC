@@ -1,5 +1,4 @@
 import {
-  PROPERTY_FILTER_STATUS_OPTIONS,
   PROPERTY_SORT_OPTIONS,
   type PropertySortValue,
 } from "@/modules/properties/constants";
@@ -12,7 +11,6 @@ export const PROPERTY_FILTER_KEYS = [
   "minRoi",
   "minArea",
   "maxDistanceFromHighway",
-  "status",
 ] as const;
 
 export type PropertyFilterKey = (typeof PROPERTY_FILTER_KEYS)[number];
@@ -25,7 +23,6 @@ export interface PropertyFilters {
   minRoi: string;
   minArea: string;
   maxDistanceFromHighway: string;
-  status: string;
 }
 
 export const defaultPropertyFilters: PropertyFilters = {
@@ -36,7 +33,6 @@ export const defaultPropertyFilters: PropertyFilters = {
   minRoi: "",
   minArea: "",
   maxDistanceFromHighway: "",
-  status: "",
 };
 
 export const defaultPropertySort: PropertySortValue = "newest";
@@ -74,5 +70,5 @@ export const countActivePropertyFilters = (filters: PropertyFilters): number =>
     return filters[key] !== "" ? count + 1 : count;
   }, 0);
 
-export { PROPERTY_FILTER_STATUS_OPTIONS, PROPERTY_SORT_OPTIONS };
+export { PROPERTY_SORT_OPTIONS };
 export type { PropertySortValue };
