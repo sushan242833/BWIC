@@ -46,7 +46,7 @@ const FooterSection: React.FC = () => {
             Office
           </h5>
           <p className="mb-4 font-auth-body text-sm leading-relaxed text-slate-500">
-            124 Lazimpat Road, Kathmandu
+            Nagarjun Tole, Bafal-13
             <br />
             Nepal
           </p>

@@ -1,12 +1,13 @@
+import Head from "next/head";
 import ContactSection from "@/components/Contact";
-import React from "react";
 
-const index = () => {
+export default function ContactPage() {
   return (
-    <div>
+    <>
+      <Head>
+        <title>Contact | Blue Whale Investment</title>
+      </Head>
       <ContactSection />
-    </div>
+    </>
   );
-};
-
-export default index;
+}
