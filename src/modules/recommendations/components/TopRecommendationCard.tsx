@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
-import { capitalize } from "@/utils/Capitalize";
 import { assetUrl } from "@/lib/api/client";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
@@ -16,144 +16,47 @@ const formatCurrency = (value?: string) => {
   }).format(numeric)}`;
 };
 
+const formatArea = (value?: string) => {
+  if (!value) return "Area unavailable";
+
+  const numeric = Number.parseFloat(value.replace(/,/g, ""));
+  if (Number.isNaN(numeric)) return `${value} sq ft`;
+
+  return `${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: numeric % 1 === 0 ? 0 : 1,
+  }).format(numeric)} sq ft`;
+};
+
+const formatPercent = (value?: string) => {
+  if (!value) return "ROI unavailable";
+
+  const numeric = Number.parseFloat(value);
+  if (Number.isNaN(numeric)) return value;
+
+  return `${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: numeric % 1 === 0 ? 0 : 1,
+  }).format(numeric)}%`;
+};
+
+const formatScore = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  }).format(value);
+
+const getReference = (id: number) => `BW-${String(id).padStart(4, "0")}`;
+
 interface TopRecommendationCardProps {
   item: RecommendationItem;
 }
 
 const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
   const image = item.property.primaryImage || item.property.images?.[0];
+  const topReasons = item.topReasons.slice(0, 3);
 
   return (
-    <section className="overflow-hidden rounded-[36px] border border-blue-200 bg-[linear-gradient(135deg,#0f172a_0%,#0b2447_50%,#0e7490_100%)] text-white shadow-[0_32px_100px_rgba(15,23,42,0.18)]">
-      <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-cyan-100">
-              Top Recommendation
-            </span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-100">
-              Rank #1
-            </span>
-          </div>
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_160px] lg:items-start">
-            <div>
-              <h2 className="text-3xl font-black leading-tight sm:text-4xl">
-                {item.property.title}
-              </h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                  {item.property.category?.name
-                    ? capitalize(item.property.category.name)
-                    : "Uncategorized"}
-                </span>
-                <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-100">
-                  {capitalize(item.property.status || "unknown")}
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-7 text-slate-200">
-                {item.property.location}
-              </p>
-              <p className="mt-6 max-w-2xl text-sm leading-7 text-slate-100">
-                {item.rankingSummary}
-              </p>
-            </div>
-
-            <div className="rounded-[28px] border border-white/15 bg-white/10 p-5 text-center backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-300">
-                Match
-              </p>
-              <p className="mt-2 text-5xl font-black">{item.matchPercentage}%</p>
-              <p className="mt-3 text-sm text-cyan-100">Best alignment score</p>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-3xl border border-white/12 bg-white/8 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">
-                Price
-              </p>
-              <p className="mt-2 text-lg font-bold text-white">
-                {formatCurrency(item.property.price)}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-white/12 bg-white/8 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">
-                ROI
-              </p>
-              <p className="mt-2 text-lg font-bold text-white">
-                {item.property.roi ? `${item.property.roi}%` : "ROI unavailable"}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-white/12 bg-white/8 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">
-                Area
-              </p>
-              <p className="mt-2 text-lg font-bold text-white">
-                {item.property.area ? `${item.property.area} sq ft` : "Area unavailable"}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-white/12 bg-white/8 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">
-                Score
-              </p>
-              <p className="mt-2 text-lg font-bold text-white">{item.score}</p>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="rounded-[30px] border border-white/12 bg-white/8 p-5 backdrop-blur">
-              <h3 className="text-lg font-bold text-white">Why this ranked first</h3>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {item.topReasons.length > 0 ? (
-                  item.topReasons.slice(0, 3).map((reason) => (
-                    <span
-                      key={reason}
-                      className="rounded-full bg-white px-3 py-2 text-sm text-slate-900"
-                    >
-                      {reason}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-slate-200">
-                    Strong positive reasons were not returned for this result.
-                  </span>
-                )}
-              </div>
-
-              {item.penalties.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
-                    Minor watch-outs
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-100">
-                    {item.penalties.map((penalty) => (
-                      <li key={penalty} className="flex gap-3">
-                        <span className="mt-2 h-2 w-2 rounded-full bg-amber-300" />
-                        <span>{penalty}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[30px] border border-white/12 bg-white p-4 text-slate-900">
-              <ScoreBreakdown breakdown={item.scoreBreakdown} compact />
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <Link
-              href={APP_ROUTES.propertyDetail(item.property.id)}
-              className="inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-            >
-              View full property details
-            </Link>
-          </div>
-        </div>
-
-        <div className="relative min-h-[320px] bg-slate-900">
+    <section className="overflow-hidden rounded-[28px] border border-[#d8def3] bg-white shadow-[0_24px_70px_rgba(19,27,46,0.08)]">
+      <div className="grid xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="relative min-h-[320px] overflow-hidden bg-[#dde4ff] xl:min-h-[440px]">
           {image ? (
             <img
               src={assetUrl(image)}
@@ -161,11 +64,134 @@ const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center px-8 text-center text-sm text-slate-300">
+            <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,#2e63d4_0%,#1e3a8a_48%,#0f172a_100%)] px-8 text-center font-auth-body text-sm text-white/80">
               No property image available
             </div>
           )}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.05)_0%,rgba(15,23,42,0.68)_100%)]" />
+
+          <div className="absolute left-6 top-6 rounded-full bg-[linear-gradient(135deg,#645efb_0%,#4b41e1_100%)] px-4 py-2 font-auth-body text-sm font-semibold text-white shadow-lg shadow-[#4b41e1]/30">
+            Match {item.matchPercentage}%
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-between p-8 sm:p-10">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-md bg-[#dbe1ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#22336f]">
+                Prime Pick
+              </span>
+              <span className="font-auth-body text-sm text-[#5b6275]">
+                Ref: {getReference(item.property.id)}
+              </span>
+            </div>
+
+            <h2 className="mt-5 font-auth-headline text-4xl font-bold leading-tight text-[#131b2e]">
+              {item.property.title}
+            </h2>
+
+            <p className="mt-3 font-auth-body text-base text-[#5b6275]">
+              {item.property.location}
+            </p>
+
+            <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#434655]">
+                  Price
+                </div>
+                <div className="mt-2 font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
+                  {formatCurrency(item.property.price)}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#434655]">
+                  ROI
+                </div>
+                <div className="mt-2 font-auth-headline text-[2rem] font-semibold text-[#2f49d1]">
+                  {formatPercent(item.property.roi)}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#434655]">
+                  Area
+                </div>
+                <div className="mt-2 font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
+                  {formatArea(item.property.area)}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#434655]">
+                  Score
+                </div>
+                <div className="mt-2 font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
+                  {formatScore(item.score)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href={APP_ROUTES.propertyDetail(item.property.id)}
+            className="mt-10 inline-flex w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#004ac6_0%,#4b41e1_100%)] px-6 py-4 text-center font-auth-body text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-lg shadow-[#004ac6]/20 transition hover:opacity-95"
+          >
+            View Full Property Details
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-8 border-t border-[#e5e9f8] bg-[#f5f7ff] px-8 py-8 lg:grid-cols-3">
+        <div className="space-y-5">
+          <h3 className="font-auth-headline text-sm font-bold uppercase tracking-[0.24em] text-[#434655]">
+            Why This Ranked First
+          </h3>
+
+          {topReasons.length > 0 ? (
+            <ul className="space-y-4">
+              {topReasons.map((reason) => (
+                <li
+                  key={reason}
+                  className="flex items-start gap-3 font-auth-body text-base text-[#131b2e]"
+                >
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#004ac6]" />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="font-auth-body text-sm leading-7 text-[#5b6275]">
+              Strong positive signals were not returned for this result yet.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-5">
+          <h3 className="font-auth-headline text-sm font-bold uppercase tracking-[0.24em] text-[#434655]">
+            Minor Watch-outs
+          </h3>
+
+          {item.penalties.length > 0 ? (
+            <div className="space-y-3">
+              {item.penalties.map((penalty) => (
+                <div
+                  key={penalty}
+                  className="flex items-start gap-3 rounded-2xl bg-[#e8edff] p-4 font-auth-body text-base text-[#131b2e]"
+                >
+                  <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                  <span>{penalty}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-[#eaf7f0] p-4 font-auth-body text-sm text-[#21563b]">
+              No major trade-offs were detected for this recommendation.
+            </div>
+          )}
+        </div>
+
+        <div>
+          <ScoreBreakdown breakdown={item.scoreBreakdown} compact />
         </div>
       </div>
     </section>

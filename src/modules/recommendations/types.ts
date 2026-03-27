@@ -6,7 +6,6 @@ import type { PropertySummary } from "@/modules/properties/types";
 
 export interface RecommendationPreferences {
   location: string;
-  locationRadiusKm: string;
   price: string;
   roi: string;
   area: string;
@@ -23,7 +22,6 @@ export interface RecommendationPreferencesPayload {
   location?: string;
   latitude?: number;
   longitude?: number;
-  locationRadiusKm?: number;
   price?: number;
   roi?: number;
   area?: number;
@@ -77,7 +75,6 @@ export interface RecommendationResponse {
 
 export const defaultRecommendationPreferences: RecommendationPreferences = {
   location: "",
-  locationRadiusKm: "",
   price: "",
   roi: "",
   area: "",

@@ -24,7 +24,6 @@ export const buildRecommendationPreferencesPayload = (
   values: RecommendationPreferences,
 ): RecommendationPreferencesPayload => ({
   location: toOptionalString(values.location),
-  locationRadiusKm: toOptionalNumber(values.locationRadiusKm),
   price: toOptionalNumber(values.price),
   roi: toOptionalNumber(values.roi),
   area: toOptionalNumber(values.area),

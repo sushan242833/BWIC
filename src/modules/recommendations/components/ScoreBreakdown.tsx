@@ -4,12 +4,17 @@ import {
 } from "@/modules/recommendations/constants";
 import type { RecommendationScoreBreakdown } from "@/modules/recommendations/types";
 
-const formatNumber = (value?: number) => {
-  if (value === undefined || value === null) return "N/A";
+const getPercentFromWeight = (key: string, value: number) => {
+  const maxWeight =
+    RECOMMENDATION_SCORE_WEIGHTS[
+      key as keyof typeof RECOMMENDATION_SCORE_WEIGHTS
+    ] || 0;
 
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: value >= 100 ? 0 : 2,
-  }).format(value);
+  if (maxWeight <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((value / maxWeight) * 100)));
 };
 
 interface ScoreBreakdownProps {
@@ -27,9 +32,17 @@ const ScoreBreakdown = ({
 
   if (entries.length === 0) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-        <h3 className="text-base font-bold text-slate-900">Score breakdown</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
+      <div
+        className={`rounded-[24px] ${
+          compact
+            ? "bg-white/80 p-5"
+            : "border border-[#e2e7ff] bg-white p-5 shadow-[0_14px_40px_rgba(19,27,46,0.04)]"
+        }`}
+      >
+        <h3 className="font-auth-headline text-sm font-bold uppercase tracking-[0.24em] text-[#434655]">
+          Score Breakdown
+        </h3>
+        <p className="mt-3 text-sm leading-6 text-[#5b6275]">
           Add more preference signals to unlock a deeper weighted breakdown for
           this result.
         </p>
@@ -39,44 +52,36 @@ const ScoreBreakdown = ({
 
   return (
     <div
-      className={`rounded-3xl border border-slate-200 bg-white ${
-        compact ? "p-4" : "p-5"
+      className={`rounded-[24px] ${
+        compact
+          ? "bg-white/80 p-5"
+          : "border border-[#e2e7ff] bg-white p-5 shadow-[0_14px_40px_rgba(19,27,46,0.04)]"
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-bold text-slate-900">Score breakdown</h3>
-        <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-          Weighted
-        </span>
+      <div>
+        <h3 className="font-auth-headline text-sm font-bold uppercase tracking-[0.24em] text-[#434655]">
+          Score Breakdown
+        </h3>
       </div>
 
       <div className="mt-4 space-y-4">
         {entries.map(([key, value]) => {
-          const maxWeight =
-            RECOMMENDATION_SCORE_WEIGHTS[
-              key as keyof typeof RECOMMENDATION_SCORE_WEIGHTS
-            ] || 0;
-          const widthPercent =
-            maxWeight > 0
-              ? Math.min(100, Math.max(0, (Number(value) / maxWeight) * 100))
-              : 0;
+          const widthPercent = getPercentFromWeight(key, Number(value));
 
           return (
-            <div key={key}>
-              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-slate-600">
+            <div key={key} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#131b2e]">
+                <span>
                   {RECOMMENDATION_SCORE_LABELS[
                     key as keyof typeof RECOMMENDATION_SCORE_LABELS
                   ] || key}
                 </span>
-                <span className="font-bold text-slate-900">
-                  {formatNumber(value)} pts
-                </span>
+                <span>{widthPercent}%</span>
               </div>
 
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#dbe1ff]">
                 <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#0f766e_0%,#1d4ed8_100%)]"
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#004ac6_0%,#4b41e1_100%)]"
                   style={{ width: `${widthPercent}%` }}
                 />
               </div>
