@@ -1,45 +1,159 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Mail, PlusCircle, Shapes, type LucideIcon } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { getApiData } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/routes";
+import { getProperties } from "@/modules/properties/api";
 
 interface StatsResponse {
   totalProperties: number;
   totalCategories: number;
 }
 
+interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  propertyType: string;
+  message?: string | null;
+  createdAt: string;
+}
+
+interface QuickAction {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  primary?: boolean;
+}
+
+const quickActions: QuickAction[] = [
+  {
+    label: "Add New Property",
+    href: APP_ROUTES.adminAddProperty,
+    icon: PlusCircle,
+    primary: true,
+  },
+  {
+    label: "Categories",
+    href: APP_ROUTES.adminCategories,
+    icon: Shapes,
+  },
+  {
+    label: "Messages",
+    href: "#recent-messages",
+    icon: Mail,
+  },
+];
+
+const formatDate = (value: string): string =>
+  new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+
+const buildSubject = (contact: ContactMessage): string => {
+  const message = contact.message?.trim();
+
+  if (message) {
+    return message.length > 60 ? `${message.slice(0, 57)}...` : message;
+  }
+
+  return `Inquiry about ${contact.propertyType}`;
+};
+
+const summaryCardStyles = [
+  {
+    label: "Total Properties",
+    accent: "Live",
+    accentClassName: "text-emerald-600",
+    formatValue: (value: number) => `${value}`,
+  },
+  {
+    label: "Total Categories",
+    accent: "Stable",
+    accentClassName: "text-[#8a97b2]",
+    formatValue: (value: number) => `${value}`,
+  },
+  {
+    label: "ROI Average",
+    accent: "Portfolio",
+    accentClassName: "text-emerald-600",
+    formatValue: (value: number) => `${value.toFixed(1)}%`,
+  },
+] as const;
+
 export default function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<StatsResponse>({
     totalProperties: 0,
     totalCategories: 0,
   });
+  const [averageRoi, setAverageRoi] = useState(0);
+  const [recentContacts, setRecentContacts] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchStats = async () => {
+    let isMounted = true;
+
+    const fetchDashboardData = async () => {
       try {
-        const data = await getApiData<StatsResponse>(
-          API_ENDPOINTS.stats.summary,
-        );
-        setStats(data);
-      } catch (err: any) {
-        console.error("Failed to fetch stats:", err);
-        setError("Failed to load stats");
+        const [summary, contacts, propertiesPayload] = await Promise.all([
+          getApiData<StatsResponse>(API_ENDPOINTS.stats.summary),
+          getApiData<ContactMessage[]>(API_ENDPOINTS.contacts.list),
+          getProperties(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const sortedContacts = [...contacts]
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() -
+              new Date(left.createdAt).getTime(),
+          )
+          .slice(0, 4);
+
+        const roiValues = propertiesPayload.data
+          .map((property) => Number.parseFloat(property.roi))
+          .filter((value): value is number => Number.isFinite(value));
+
+        const roiAverage = roiValues.length
+          ? roiValues.reduce((total, value) => total + value, 0) /
+            roiValues.length
+          : 0;
+
+        setStats(summary);
+        setRecentContacts(sortedContacts);
+        setAverageRoi(roiAverage);
+      } catch (err) {
+        console.error("Failed to load admin dashboard data:", err);
+        if (isMounted) {
+          setError("Failed to load dashboard data.");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-    fetchStats();
+
+    void fetchDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-slate-600 font-medium">
+      <div className="flex min-h-[calc(100vh-6.25rem)] items-center justify-center px-6">
+        <div className="rounded-[28px] border border-[#e8ebf8] bg-white px-10 py-9 text-center shadow-[0_24px_70px_rgba(19,27,46,0.05)]">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#004ac6] border-t-transparent" />
+          <p className="mt-5 text-base font-medium text-[#4e5a73]">
             Loading dashboard...
           </p>
         </div>
@@ -49,193 +163,152 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">
-            Error Loading Dashboard
+      <div className="flex min-h-[calc(100vh-6.25rem)] items-center justify-center px-6">
+        <div className="max-w-md rounded-[28px] border border-[#ffd9d6] bg-white px-8 py-8 shadow-[0_24px_70px_rgba(19,27,46,0.05)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#ba1a1a]">
+            Dashboard Error
+          </p>
+          <h2 className="mt-4 font-auth-headline text-3xl font-bold text-[#131b2e]">
+            Something went wrong
           </h2>
-          <p className="text-red-600">{error}</p>
+          <p className="mt-3 text-base text-[#5f6b84]">{error}</p>
         </div>
       </div>
     );
   }
 
-  const quickActions = [
-    {
-      href: APP_ROUTES.adminAddProperty,
-      label: "Add New Property",
-      icon: "➕",
-      gradient: "from-blue-500 to-blue-600",
-      hoverGradient: "from-blue-600 to-blue-700",
-    },
-    {
-      href: APP_ROUTES.adminProperties,
-      label: "Manage Properties",
-      icon: "🏘️",
-      gradient: "from-green-500 to-green-600",
-      hoverGradient: "from-green-600 to-green-700",
-    },
-    {
-      href: APP_ROUTES.adminCategories,
-      label: "Manage Categories",
-      icon: "🏷️",
-      gradient: "from-amber-500 to-amber-600",
-      hoverGradient: "from-amber-600 to-amber-700",
-    },
-  ];
+  const summaryValues = [
+    stats.totalProperties,
+    stats.totalCategories,
+    averageRoi,
+  ] as const;
 
   return (
-    <div className="min-h-screen ">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="mb-12 animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
-            👋 Welcome Back, Admin
-          </h1>
-          <p className="text-lg text-slate-600">
-            Manage your properties, categories, and settings with ease.
-          </p>
-        </div>
+    <div className="px-4 py-6 sm:px-6 lg:px-12 lg:py-10">
+      <section className="flex flex-wrap items-center gap-4">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          const className = action.primary
+            ? "border-[#0f49cc] bg-[#1550cf] text-white shadow-[0_20px_35px_rgba(21,80,207,0.22)] hover:bg-[#0f49cc]"
+            : "border-[#e4e7f2] bg-white text-[#1d2438] hover:bg-[#f8f9ff]";
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-12">
-          {/* Properties Card */}
-          <div className="group relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative p-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-lg">
-                  🏠
-                </div>
-                <div className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  Total
-                </div>
-              </div>
-              <h2 className="text-5xl font-bold text-slate-800 mb-2">
-                {stats.totalProperties}
-              </h2>
-              <p className="text-slate-500 font-medium">Properties Listed</p>
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <Link
-                  href={APP_ROUTES.adminProperties}
-                  className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors inline-flex items-center gap-1"
-                >
-                  View all{" "}
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </div>
+          const content = (
+            <>
+              <Icon className="h-5 w-5" />
+              <span>{action.label}</span>
+            </>
+          );
 
-          {/* Categories Card */}
-          <div className="group relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative p-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-lg">
-                  📂
-                </div>
-                <div className="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
-                  Active
-                </div>
-              </div>
-              <h2 className="text-5xl font-bold text-slate-800 mb-2">
-                {stats.totalCategories}
-              </h2>
-              <p className="text-slate-500 font-medium">Categories Available</p>
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <Link
-                  href={APP_ROUTES.adminCategories}
-                  className="text-sm text-amber-600 font-semibold hover:text-amber-700 transition-colors inline-flex items-center gap-1"
-                >
-                  View all{" "}
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
+          return action.href.startsWith("#") ? (
+            <a
+              key={action.label}
+              href={action.href}
+              className={`inline-flex h-16 items-center gap-3 rounded-2xl border px-6 text-lg font-semibold transition ${className}`}
+            >
+              {content}
+            </a>
+          ) : (
+            <Link
+              key={action.label}
+              href={action.href}
+              className={`inline-flex h-16 items-center gap-3 rounded-2xl border px-6 text-lg font-semibold transition ${className}`}
+            >
+              {content}
+            </Link>
+          );
+        })}
+      </section>
 
-        {/* Quick Actions */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <span className="text-3xl">⚡</span>
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions.map((action, index) => (
-              <Link
-                key={index}
-                href={action.href}
-                className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+      <section className="mt-12 grid gap-6 xl:grid-cols-3">
+        {summaryCardStyles.map((card, index) => (
+          <article
+            key={card.label}
+            className="rounded-[24px] border border-[#ebedf7] bg-white px-8 py-7 shadow-[0_20px_55px_rgba(19,27,46,0.04)]"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#1d2438]">
+              {card.label}
+            </p>
+            <div className="mt-5 flex items-end gap-3">
+              <h3 className="font-auth-headline text-[3.25rem] font-bold leading-none text-[#172035]">
+                {card.formatValue(summaryValues[index])}
+              </h3>
+              <span
+                className={`pb-1 text-xl font-semibold ${card.accentClassName}`}
               >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${action.gradient} group-hover:${action.hoverGradient} transition-all`}
-                ></div>
-                <div className="relative p-6 flex items-center gap-4">
-                  <div className="text-4xl group-hover:scale-110 transition-transform">
-                    {action.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold text-lg">
-                      {action.label}
-                    </h3>
-                    <p className="text-white/90 text-sm mt-1">
-                      Click to proceed
-                    </p>
-                  </div>
-                  <div className="ml-auto text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                    →
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                {card.accent}
+              </span>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section
+        id="recent-messages"
+        className="mt-12 overflow-hidden rounded-[28px] border border-[#e8ebf8] bg-white shadow-[0_24px_70px_rgba(19,27,46,0.04)]"
+      >
+        <div className="flex flex-col gap-4 border-b border-[#edf0fb] px-8 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
+            Recent Contact Messages
+          </h2>
+          <span className="text-sm font-bold uppercase tracking-[0.28em] text-[#004ac6]">
+            View All Inbox
+          </span>
         </div>
 
-        {/* Recent Activity Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <span className="text-3xl">📊</span>
-              Recent Activity
-            </h2>
-            <button className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition-colors">
-              View All
-            </button>
-          </div>
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center">
-            <div className="text-6xl mb-4 opacity-50">📈</div>
-            <p className="text-slate-500 font-medium mb-2">
-              No recent activity yet
+        {recentContacts.length === 0 ? (
+          <div className="px-8 py-16 text-center">
+            <p className="font-auth-headline text-2xl font-semibold text-[#131b2e]">
+              No messages yet
             </p>
-            <p className="text-slate-400 text-sm">
-              Recent property additions and updates will appear here
+            <p className="mt-3 text-base text-[#65708a]">
+              New contact submissions will appear here once prospects start
+              reaching out.
             </p>
           </div>
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-out;
-        }
-      `}</style>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-[#f1f4ff]">
+                  <th className="px-8 py-4 text-xs font-bold uppercase tracking-[0.28em] text-[#1d2438]">
+                    Sender
+                  </th>
+                  <th className="px-8 py-4 text-xs font-bold uppercase tracking-[0.28em] text-[#1d2438]">
+                    Email
+                  </th>
+                  <th className="px-8 py-4 text-xs font-bold uppercase tracking-[0.28em] text-[#1d2438]">
+                    Subject
+                  </th>
+                  <th className="px-8 py-4 text-right text-xs font-bold uppercase tracking-[0.28em] text-[#1d2438]">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#eef1fb]">
+                {recentContacts.map((contact) => (
+                  <tr
+                    key={contact.id}
+                    className="transition hover:bg-[#fafbff]"
+                  >
+                    <td className="px-8 py-6 text-[1.05rem] font-semibold text-[#111827]">
+                      {contact.name}
+                    </td>
+                    <td className="px-8 py-6 text-[1.05rem] text-[#5f7597]">
+                      {contact.email}
+                    </td>
+                    <td className="px-8 py-6 text-[1.05rem] text-[#1f2937]">
+                      {buildSubject(contact)}
+                    </td>
+                    <td className="px-8 py-6 text-right text-sm text-[#8a97b2]">
+                      {formatDate(contact.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
