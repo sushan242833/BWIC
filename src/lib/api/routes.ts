@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   },
   contacts: {
     list: withApiBasePath("/contacts"),
+    detail: (id: string | number) => withApiBasePath(`/contacts/${id}`),
   },
   stats: {
     summary: withApiBasePath("/stats"),

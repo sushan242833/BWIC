@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Search,
   Shapes,
@@ -57,11 +58,19 @@ const defaultNavItems: SidebarItem[] = [
       "/admin/editCategory",
     ],
   },
+  {
+    name: "Messages",
+    path: APP_ROUTES.adminMessages,
+    icon: Mail,
+    matchPrefixes: [APP_ROUTES.adminMessages],
+  },
 ];
 
 const getPageTitle = (pathname: string, fallbackTitle?: string): string => {
   if (pathname === APP_ROUTES.adminDashboard) return "Dashboard";
   if (pathname === APP_ROUTES.adminProperties) return "Properties";
+  if (pathname === APP_ROUTES.adminMessages) return "Messages";
+  if (pathname.startsWith("/admin/messages/")) return "Inquiry Details";
   if (pathname.startsWith("/admin/addProperty")) return "Add Property";
   if (pathname.startsWith("/admin/editProperty")) return "Edit Property";
   if (pathname === APP_ROUTES.adminCategories) return "Categories";

@@ -4,20 +4,13 @@ import { Mail, PlusCircle, Shapes, type LucideIcon } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { getApiData } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/routes";
+import { getContactMessages } from "@/modules/contacts/api";
+import type { ContactMessage } from "@/modules/contacts/types";
 import { getProperties } from "@/modules/properties/api";
 
 interface StatsResponse {
   totalProperties: number;
   totalCategories: number;
-}
-
-interface ContactMessage {
-  id: number;
-  name: string;
-  email: string;
-  propertyType: string;
-  message?: string | null;
-  createdAt: string;
 }
 
 interface QuickAction {
@@ -41,7 +34,7 @@ const quickActions: QuickAction[] = [
   },
   {
     label: "Messages",
-    href: "#recent-messages",
+    href: APP_ROUTES.adminMessages,
     icon: Mail,
   },
 ];
@@ -101,7 +94,7 @@ export default function Dashboard() {
       try {
         const [summary, contacts, propertiesPayload] = await Promise.all([
           getApiData<StatsResponse>(API_ENDPOINTS.stats.summary),
-          getApiData<ContactMessage[]>(API_ENDPOINTS.contacts.list),
+          getContactMessages(),
           getProperties(),
         ]);
 
@@ -250,9 +243,12 @@ export default function Dashboard() {
           <h2 className="font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
             Recent Contact Messages
           </h2>
-          <span className="text-sm font-bold uppercase tracking-[0.28em] text-[#004ac6]">
+          <Link
+            href={APP_ROUTES.adminMessages}
+            className="text-sm font-bold uppercase tracking-[0.28em] text-[#004ac6] transition hover:text-[#003da4]"
+          >
             View All Inbox
-          </span>
+          </Link>
         </div>
 
         {recentContacts.length === 0 ? (

@@ -14,6 +14,8 @@ export const APP_ROUTES = {
   adminLogin: "/admin/login",
   adminAddProperty: "/admin/addProperty",
   adminProperties: "/admin/properties",
+  adminMessages: "/admin/messages",
+  adminMessageDetail: (id: string | number) => `/admin/messages/${id}`,
   adminEditProperty: (id: string | number) => `/admin/editProperty/${id}`,
   adminCategories: "/admin/categories",
   adminCategoryDetail: (id: string | number) => `/admin/categories/${id}`,
