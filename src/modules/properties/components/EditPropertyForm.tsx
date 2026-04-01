@@ -1,32 +1,85 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
-import {
-  getLocationSuggestions,
-  LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
-  shouldFetchLocationSuggestions,
-} from "@/modules/locations/api";
+import { getLocationSuggestions } from "@/modules/locations/api";
 import { getProperty, updateProperty } from "@/modules/properties/api";
+import PropertyFormScreen from "@/modules/properties/components/PropertyFormScreen";
 import {
-  PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE,
   PROPERTY_FORM_MESSAGES,
   PROPERTY_FORM_TEXT,
+  PROPERTY_IMAGE_MAX_FILE_SIZE_MB,
   PROPERTY_IMAGE_UPLOAD_LIMIT,
   PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
   PROPERTY_LOCATION_EXISTING_PLACE_ID,
-  PROPERTY_STATUS_OPTIONS,
 } from "@/modules/properties/constants";
-import { createEmptyPropertyFormData } from "@/modules/properties/form-data";
+import {
+  createEmptyPropertyFormData,
+  createPropertyFormDataFromDetail,
+} from "@/modules/properties/form-data";
+import { formatPropertyReference } from "@/modules/properties/reference";
 import { validatePropertyForm } from "@/modules/properties/form-validation";
 import type {
   CategoryOption,
   LocationSuggestion,
+  PropertyDetail,
   PropertyFormData,
 } from "@/modules/properties/types";
+
+const LOCATION_AUTOCOMPLETE_DEBOUNCE_MS = 350;
+
+const revokePreviewUrl = (value: string) => {
+  if (value.startsWith("blob:")) {
+    URL.revokeObjectURL(value);
+  }
+};
+
+const removeFieldError = (
+  currentErrors: Record<string, string>,
+  key: string,
+): Record<string, string> => {
+  if (!currentErrors[key]) {
+    return currentErrors;
+  }
+
+  const nextErrors = { ...currentErrors };
+  delete nextErrors[key];
+  return nextErrors;
+};
+
+const shouldFetchLocationSuggestions = (query: string): boolean =>
+  query.trim().length >= 3;
+
+const formatLastUpdated = (value?: string): string => {
+  if (!value) {
+    return "Ready for refinement";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+};
+
+const getBadgeClassName = (status: string): string => {
+  if (status === "Available") {
+    return "bg-[#e4f8ea] text-[#14753a]";
+  }
+
+  if (status === "Pending") {
+    return "bg-[#fff3d6] text-[#9f6400]";
+  }
+
+  if (status === "Sold") {
+    return "bg-[#ffe3e5] text-[#b42318]";
+  }
+
+  return "bg-[#eef0ff] text-[#4b41e1]";
+};
 
 const EditPropertyForm: React.FC = () => {
   const router = useRouter();
@@ -35,11 +88,14 @@ const EditPropertyForm: React.FC = () => {
   const [formData, setFormData] = useState<PropertyFormData>(() =>
     createEmptyPropertyFormData(),
   );
+  const [initialFormData, setInitialFormData] =
+    useState<PropertyFormData | null>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
@@ -48,62 +104,80 @@ const EditPropertyForm: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [selectedLocationPlaceId, setSelectedLocationPlaceId] = useState("");
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [propertyMeta, setPropertyMeta] = useState<PropertyDetail | null>(null);
 
   useEffect(() => {
     if (!id) {
       return;
     }
 
+    let isMounted = true;
+
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setLoadError("");
+
         const [categoryData, property] = await Promise.all([
           getCategories(),
           getProperty(String(id)),
         ]);
+
+        if (!isMounted) {
+          return;
+        }
 
         const existingImages = property.images || [];
         const existingPreviewUrls = existingImages.map((imagePath: string) =>
           assetUrl(imagePath),
         );
 
-        setCategories(categoryData as CategoryOption[]);
-        setFormData({
-          ...createEmptyPropertyFormData(),
+        const hydratedFormData = createPropertyFormDataFromDetail({
           ...property,
-          images: [],
-          existingImages,
+          images: existingImages,
         });
+
+        setCategories(categoryData as CategoryOption[]);
+        setFormData(hydratedFormData);
+        setInitialFormData(hydratedFormData);
+        setPreviews(existingPreviewUrls);
         setLocationQuery(property.location || "");
         setSelectedLocationPlaceId(PROPERTY_LOCATION_EXISTING_PLACE_ID);
-        setPreviews(existingPreviewUrls);
+        setPropertyMeta(property);
       } catch (error) {
         console.error("Error loading property:", error);
+        if (isMounted) {
+          setLoadError("We couldn't load this property right now.");
+        }
       } finally {
-        setLoading(false);
-        setLoadingCategories(false);
+        if (isMounted) {
+          setLoading(false);
+          setLoadingCategories(false);
+        }
       }
     };
 
-    fetchData();
+    void fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   useEffect(() => {
     return () => {
-      previews.forEach((preview) => {
-        if (preview.startsWith("blob:")) {
-          URL.revokeObjectURL(preview);
-        }
-      });
+      previews.forEach(revokePreviewUrl);
     };
   }, [previews]);
 
   useEffect(() => {
     if (!shouldFetchLocationSuggestions(locationQuery)) {
       setLocationSuggestions([]);
+      setLocationLoading(false);
       return;
     }
 
-    const timeout = setTimeout(async () => {
+    const timeout = window.setTimeout(async () => {
       try {
         setLocationLoading(true);
         const suggestions = await getLocationSuggestions(locationQuery);
@@ -116,8 +190,19 @@ const EditPropertyForm: React.FC = () => {
       }
     }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
-    return () => clearTimeout(timeout);
+    return () => window.clearTimeout(timeout);
   }, [locationQuery]);
+
+  const updateField = (
+    name: keyof PropertyFormData,
+    value: string | number | File[] | string[] | undefined,
+  ) => {
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+    setErrors((previous) => removeFieldError(previous, String(name)));
+  };
 
   const handleChange = (
     event: React.ChangeEvent<
@@ -125,17 +210,25 @@ const EditPropertyForm: React.FC = () => {
     >,
   ) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "categoryId"
-          ? Number(value)
-          : name === "distanceFromHighway"
-            ? value === ""
-              ? undefined
-              : Number(value)
-            : value,
-    }));
+
+    if (name === "categoryId") {
+      updateField("categoryId", Number(value));
+      return;
+    }
+
+    if (name === "distanceFromHighway") {
+      updateField(
+        "distanceFromHighway",
+        value === "" ? undefined : Number(value),
+      );
+      return;
+    }
+
+    updateField(name as keyof PropertyFormData, value);
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    updateField("description", value);
   };
 
   const handleLocationQueryChange = (
@@ -145,63 +238,74 @@ const EditPropertyForm: React.FC = () => {
     setLocationQuery(nextQuery);
     setIsLocationDropdownOpen(true);
     setSelectedLocationPlaceId("");
-    setFormData((prev) => ({ ...prev, location: "" }));
+    setFormData((previous) => ({ ...previous, location: "" }));
+    setErrors((previous) => removeFieldError(previous, "location"));
   };
 
   const handleLocationSelect = (selected: LocationSuggestion) => {
     setSelectedLocationPlaceId(selected.placeId);
     setLocationQuery(selected.description);
-    setFormData((prev) => ({ ...prev, location: selected.description }));
+    setFormData((previous) => ({
+      ...previous,
+      location: selected.description,
+    }));
     setLocationSuggestions([]);
-    setIsLocationDropdownOpen(false);
+    window.setTimeout(
+      () => setIsLocationDropdownOpen(false),
+      PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+    );
+    setErrors((previous) => removeFieldError(previous, "location"));
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) {
-      return;
-    }
-
-    const selectedFiles = Array.from(event.target.files);
+  const handleFilesAdded = (files: File[]) => {
     const totalFiles =
       (formData.existingImages?.length || 0) +
       formData.images.length +
-      selectedFiles.length;
+      files.length;
 
     if (totalFiles > PROPERTY_IMAGE_UPLOAD_LIMIT) {
       alert(PROPERTY_FORM_MESSAGES.imageLimitError);
       return;
     }
 
-    const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
+    const oversizedFile = files.find(
+      (file) => file.size > PROPERTY_IMAGE_MAX_FILE_SIZE_MB * 1024 * 1024,
+    );
 
-    setFormData((prev) => ({
-      ...prev,
-      images: [...prev.images, ...selectedFiles],
+    if (oversizedFile) {
+      alert(PROPERTY_FORM_MESSAGES.imageSizeError);
+      return;
+    }
+
+    const nextPreviews = files.map((file) => URL.createObjectURL(file));
+
+    setFormData((previous) => ({
+      ...previous,
+      images: [...previous.images, ...files],
     }));
-
-    setPreviews((prev) => [...prev, ...newPreviews]);
+    setPreviews((previous) => [...previous, ...nextPreviews]);
   };
 
   const removeImage = (index: number, isExisting = false) => {
-    setFormData((prev) => {
+    setFormData((previous) => {
       if (isExisting) {
-        const updatedExistingImages = [...(prev.existingImages || [])];
+        const updatedExistingImages = [...(previous.existingImages || [])];
         updatedExistingImages.splice(index, 1);
-        return { ...prev, existingImages: updatedExistingImages };
+        return { ...previous, existingImages: updatedExistingImages };
       }
 
-      const updatedImages = [...prev.images];
+      const updatedImages = [...previous.images];
       updatedImages.splice(index, 1);
-      return { ...prev, images: updatedImages };
+      return { ...previous, images: updatedImages };
     });
 
-    setPreviews((prev) => {
-      const updatedPreviews = [...prev];
+    setPreviews((previous) => {
+      const updatedPreviews = [...previous];
       const existingCount = formData.existingImages?.length || 0;
       const previewIndex = isExisting ? index : existingCount + index;
       const previewToRevoke = updatedPreviews[previewIndex];
-      if (previewToRevoke?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewToRevoke);
+      if (previewToRevoke) {
+        revokePreviewUrl(previewToRevoke);
       }
       updatedPreviews.splice(previewIndex, 1);
       return updatedPreviews;
@@ -217,8 +321,9 @@ const EditPropertyForm: React.FC = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!validate()) {
       return;
     }
@@ -229,7 +334,7 @@ const EditPropertyForm: React.FC = () => {
       await updateProperty(String(id), formData);
 
       alert(PROPERTY_FORM_MESSAGES.editSuccess);
-      router.push(APP_ROUTES.adminProperties);
+      await router.push(APP_ROUTES.adminProperties);
     } catch (error) {
       console.error(error);
       alert(PROPERTY_FORM_MESSAGES.editError);
@@ -238,329 +343,92 @@ const EditPropertyForm: React.FC = () => {
     }
   };
 
+  const previewImages = useMemo(() => {
+    const existingCount = formData.existingImages?.length || 0;
+
+    return previews.map((src, index) => {
+      const isExisting = index < existingCount;
+      const sourceIndex = isExisting ? index : index - existingCount;
+
+      return {
+        id: `${isExisting ? "existing" : "new"}-${index}`,
+        src,
+        alt: `Property preview ${index + 1}`,
+        isPrimary: index === 0,
+        onRemove: () => removeImage(sourceIndex, isExisting),
+      };
+    });
+  }, [formData.existingImages, previews]);
+
   if (loading) {
-    return <div className="p-10 text-center">{PROPERTY_FORM_TEXT.loading}</div>;
+    return (
+      <div className="flex min-h-[calc(100vh-6.25rem)] items-center justify-center px-6">
+        <div className="rounded-[2rem] border border-[#e8ebf8] bg-white px-8 py-8 text-center shadow-[0_24px_70px_rgba(19,27,46,0.06)]">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#004ac6] border-t-transparent" />
+          <p className="mt-5 text-base font-medium text-[#4e5a73]">
+            {PROPERTY_FORM_TEXT.loading}
+          </p>
+        </div>
+      </div>
+    );
   }
 
+  if (loadError || !initialFormData) {
+    return (
+      <section className="px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl rounded-[2rem] border border-[#ffd9d6] bg-white px-8 py-10 shadow-[0_24px_70px_rgba(19,27,46,0.06)]">
+          <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#ba1a1a]">
+            Property Load Error
+          </p>
+          <h2 className="mt-4 font-auth-headline text-3xl font-bold text-[#131b2e]">
+            Unable to open this property
+          </h2>
+          <p className="mt-3 text-base text-[#5f6b84]">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void router.reload()}
+            className="mt-6 inline-flex items-center justify-center rounded-2xl bg-[#004ac6] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#003da4]"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const reference = id ? formatPropertyReference(String(id)) : "Draft";
+
   return (
-    <div className="pt-20 pb-20 px-4 min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          {PROPERTY_FORM_TEXT.editTitle}
-        </h2>
-
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.titleLabel}
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.title && (
-              <p className="text-sm text-red-500 mt-1">{errors.title}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.categoryLabel}
-            </label>
-            <select
-              name="categoryId"
-              value={formData.categoryId}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              disabled={loadingCategories}
-            >
-              <option value={PROPERTY_DEFAULT_CATEGORY_OPTION_VALUE}>
-                {PROPERTY_FORM_TEXT.categoryPlaceholder}
-              </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            {errors.categoryId && (
-              <p className="text-sm text-red-500 mt-1">{errors.categoryId}</p>
-            )}
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.locationLabel}
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={locationQuery}
-                onChange={handleLocationQueryChange}
-                onFocus={() => setIsLocationDropdownOpen(true)}
-                onBlur={() =>
-                  setTimeout(
-                    () => setIsLocationDropdownOpen(false),
-                    PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
-                  )
-                }
-                placeholder={PROPERTY_FORM_TEXT.locationPlaceholder}
-                className="w-full border rounded px-3 py-2"
-              />
-
-              {isLocationDropdownOpen &&
-                shouldFetchLocationSuggestions(locationQuery) && (
-                  <div className="absolute z-30 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-64 overflow-auto">
-                    {locationLoading && (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        {PROPERTY_FORM_TEXT.loadingLocations}
-                      </div>
-                    )}
-
-                    {!locationLoading && locationSuggestions.length === 0 && (
-                      <div className="px-3 py-2 text-sm text-gray-500">
-                        {PROPERTY_FORM_TEXT.noLocations}
-                      </div>
-                    )}
-
-                    {!locationLoading &&
-                      locationSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.placeId}
-                          type="button"
-                          onClick={() => handleLocationSelect(suggestion)}
-                          className={`block w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                            selectedLocationPlaceId === suggestion.placeId
-                              ? "bg-gray-100"
-                              : ""
-                          }`}
-                        >
-                          {suggestion.description}
-                        </button>
-                      ))}
-                  </div>
-                )}
-            </div>
-            {errors.location && (
-              <p className="text-sm text-red-500 mt-1">{errors.location}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.priceLabel}
-            </label>
-            <input
-              step={100000}
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.price && (
-              <p className="text-sm text-red-500 mt-1">{errors.price}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.roiLabel}
-            </label>
-            <input
-              type="number"
-              name="roi"
-              value={formData.roi}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.roi && (
-              <p className="text-sm text-red-500 mt-1">{errors.roi}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.statusLabel}
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="">{PROPERTY_FORM_TEXT.statusPlaceholder}</option>
-              {PROPERTY_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors.status && (
-              <p className="text-sm text-red-500 mt-1">{errors.status}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.areaLabel}
-            </label>
-            <input
-              step={10}
-              type="number"
-              name="area"
-              value={formData.area}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.area && (
-              <p className="text-sm text-red-500 mt-1">{errors.area}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.areaNepaliLabel}
-            </label>
-            <input
-              type="text"
-              name="areaNepali"
-              value={formData.areaNepali}
-              onChange={handleChange}
-              placeholder={PROPERTY_FORM_TEXT.areaNepaliPlaceholder}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.areaNepali && (
-              <p className="text-sm text-red-500 mt-1">{errors.areaNepali}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.distanceLabel}
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              name="distanceFromHighway"
-              value={formData.distanceFromHighway ?? ""}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.distanceFromHighway && (
-              <p className="text-sm text-red-500 mt-1">
-                {errors.distanceFromHighway}
-              </p>
-            )}
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-2">
-              {PROPERTY_FORM_TEXT.imagesLabel}
-            </label>
-
-            {previews.length > 0 && (
-              <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                {previews.map((src, index) => {
-                  const existingCount = formData.existingImages?.length || 0;
-                  const isExisting = index < existingCount;
-                  const sourceIndex = isExisting
-                    ? index
-                    : index - existingCount;
-
-                  return (
-                    <div
-                      key={`preview-${index}`}
-                      className="relative group rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition"
-                    >
-                      <img
-                        src={src}
-                        alt=""
-                        className="w-full h-32 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(sourceIndex, isExisting)}
-                        className="absolute top-1 right-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition"
-                      >
-                        x
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition ${
-                formData.images.length +
-                  (formData.existingImages?.length || 0) >=
-                PROPERTY_IMAGE_UPLOAD_LIMIT
-                  ? "border-gray-300 bg-gray-50 cursor-not-allowed"
-                  : "border-gray-400 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50"
-              }`}
-            >
-              <input
-                type="file"
-                name="images"
-                multiple
-                id="image-upload"
-                onChange={handleImageChange}
-                className="hidden"
-                disabled={
-                  formData.images.length +
-                    (formData.existingImages?.length || 0) >=
-                  PROPERTY_IMAGE_UPLOAD_LIMIT
-                }
-              />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer text-yellow-600 hover:text-yellow-500 text-center"
-              >
-                {PROPERTY_FORM_TEXT.imageUploadPrompt}
-              </label>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block font-medium text-gray-700 mb-1">
-              {PROPERTY_FORM_TEXT.descriptionLabel}
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={4}
-              className="w-full border rounded px-3 py-2"
-            />
-            {errors.description && (
-              <p className="text-sm text-red-500 mt-1">{errors.description}</p>
-            )}
-          </div>
-
-          <div className="md:col-span-2 text-right">
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`${
-                submitting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-              } text-white font-medium py-2 px-6 rounded transition`}
-            >
-              {submitting
-                ? PROPERTY_FORM_TEXT.updatingSubmit
-                : PROPERTY_FORM_TEXT.editSubmit}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <PropertyFormScreen
+      mode="edit"
+      formData={formData}
+      errors={errors}
+      categories={categories}
+      loadingCategories={loadingCategories}
+      locationQuery={locationQuery}
+      locationSuggestions={locationSuggestions}
+      locationLoading={locationLoading}
+      isLocationDropdownOpen={
+        isLocationDropdownOpen && shouldFetchLocationSuggestions(locationQuery)
+      }
+      selectedLocationPlaceId={selectedLocationPlaceId}
+      previewImages={previewImages}
+      submitting={submitting}
+      pageTitle={PROPERTY_FORM_TEXT.editTitle}
+      headerTitle={formData.title || "Property Draft"}
+      headerMeta={`ID: ${reference} • Last updated ${formatLastUpdated(propertyMeta?.updatedAt)}`}
+      badgeLabel={formData.status || "Draft"}
+      badgeClassName={getBadgeClassName(formData.status)}
+      submitLabel={PROPERTY_FORM_TEXT.editSubmit}
+      submittingLabel={PROPERTY_FORM_TEXT.updatingSubmit}
+      onSubmit={handleSubmit}
+      onFieldChange={handleChange}
+      onDescriptionChange={handleDescriptionChange}
+      onLocationQueryChange={handleLocationQueryChange}
+      onLocationSelect={handleLocationSelect}
+      onLocationDropdownOpenChange={setIsLocationDropdownOpen}
+      onFilesAdded={handleFilesAdded}
+    />
   );
 };
 

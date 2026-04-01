@@ -8,13 +8,25 @@ interface ValidatePropertyFormOptions {
   hasSelectedLocation: boolean;
 }
 
+const getTrimmedValue = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value).trim();
+  }
+
+  return "";
+};
+
 export const validatePropertyForm = (
   formData: PropertyFormData,
   options: ValidatePropertyFormOptions,
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
 
-  if (!formData.title.trim()) {
+  if (!getTrimmedValue(formData.title)) {
     errors.title = PROPERTY_FORM_MESSAGES.titleRequired;
   }
 
@@ -22,27 +34,27 @@ export const validatePropertyForm = (
     errors.categoryId = PROPERTY_FORM_MESSAGES.categoryRequired;
   }
 
-  if (!formData.location.trim() || !options.hasSelectedLocation) {
+  if (!getTrimmedValue(formData.location) || !options.hasSelectedLocation) {
     errors.location = PROPERTY_FORM_MESSAGES.locationRequired;
   }
 
-  if (!formData.price.trim()) {
+  if (!getTrimmedValue(formData.price)) {
     errors.price = PROPERTY_FORM_MESSAGES.priceRequired;
   }
 
-  if (!formData.roi.trim()) {
+  if (!getTrimmedValue(formData.roi)) {
     errors.roi = PROPERTY_FORM_MESSAGES.roiRequired;
   }
 
-  if (!formData.status.trim()) {
+  if (!getTrimmedValue(formData.status)) {
     errors.status = PROPERTY_FORM_MESSAGES.statusRequired;
   }
 
-  if (!formData.area.trim()) {
+  if (!getTrimmedValue(formData.area)) {
     errors.area = PROPERTY_FORM_MESSAGES.areaRequired;
   }
 
-  if (!formData.description.trim()) {
+  if (!getTrimmedValue(formData.description)) {
     errors.description = PROPERTY_FORM_MESSAGES.descriptionRequired;
   }
 
@@ -53,9 +65,11 @@ export const validatePropertyForm = (
     errors.distanceFromHighway = PROPERTY_FORM_MESSAGES.distanceNegative;
   }
 
+  const normalizedAreaNepali = getTrimmedValue(formData.areaNepali);
+
   if (
-    formData.areaNepali &&
-    !PROPERTY_AREA_NEPALI_PATTERN.test(formData.areaNepali)
+    normalizedAreaNepali &&
+    !PROPERTY_AREA_NEPALI_PATTERN.test(normalizedAreaNepali)
   ) {
     errors.areaNepali = PROPERTY_FORM_MESSAGES.areaNepaliInvalid;
   }

@@ -11,6 +11,7 @@ import {
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { deleteProperty, getProperties } from "@/modules/properties/api";
+import { formatPropertyReference } from "@/modules/properties/reference";
 import {
   formatPropertyStatus,
   normalizePropertyStatus,
@@ -90,9 +91,6 @@ const formatPercent = (value?: string | number | null): string => {
 
 const titleCase = (value: string): string =>
   value.replace(/\b\w/g, (character) => character.toUpperCase());
-
-const getPropertyReference = (id: number): string =>
-  `#BW-${String(id).padStart(4, "0")}`;
 
 const getPrimaryImage = (property: PropertySummary): string | null =>
   property.primaryImage ?? property.images?.[0] ?? null;
@@ -496,7 +494,7 @@ export default function PropertiesTable() {
                                 {property.title}
                               </p>
                               <p className="mt-1 text-[0.98rem] text-[#434655]">
-                                ID: {getPropertyReference(property.id)}
+                                ID: {formatPropertyReference(property.id)}
                               </p>
                             </div>
                           </div>

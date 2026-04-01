@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
+import { formatPropertyReference } from "@/modules/properties/reference";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
 
@@ -43,8 +44,6 @@ const formatScore = (value: number) =>
     maximumFractionDigits: value % 1 === 0 ? 0 : 2,
   }).format(value);
 
-const getReference = (id: number) => `BW-${String(id).padStart(4, "0")}`;
-
 interface TopRecommendationCardProps {
   item: RecommendationItem;
 }
@@ -81,7 +80,7 @@ const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
                 Prime Pick
               </span>
               <span className="font-auth-body text-sm text-[#5b6275]">
-                Ref: {getReference(item.property.id)}
+                ID: {formatPropertyReference(item.property.id)}
               </span>
             </div>
 
