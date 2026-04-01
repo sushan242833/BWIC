@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { useRouter } from "next/router";
 import {
-  BadgeCheck,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -668,12 +667,6 @@ const Properties = () => {
                     <div className="absolute left-4 top-4 rounded-full bg-[linear-gradient(135deg,#5a53f5_0%,#726bff_100%)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(75,65,225,0.18)]">
                       {getCategoryLabel(property)}
                     </div>
-
-                    {(index === 0 || index === 2) && (
-                      <div className="absolute right-4 top-4 rounded-full bg-white/95 p-2 text-[#0b46cf] shadow-[0_10px_20px_rgba(19,27,46,0.12)]">
-                        <BadgeCheck className="h-4 w-4 fill-current" />
-                      </div>
-                    )}
                   </div>
 
                   <div className="p-5">

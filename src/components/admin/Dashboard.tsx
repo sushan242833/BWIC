@@ -6,7 +6,6 @@ import { getApiData } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/routes";
 import { getContactMessages } from "@/modules/contacts/api";
 import type { ContactMessage } from "@/modules/contacts/types";
-import { getProperties } from "@/modules/properties/api";
 
 interface StatsResponse {
   totalProperties: number;
@@ -69,12 +68,6 @@ const summaryCardStyles = [
     accentClassName: "text-[#8a97b2]",
     formatValue: (value: number) => `${value}`,
   },
-  {
-    label: "ROI Average",
-    accent: "Portfolio",
-    accentClassName: "text-emerald-600",
-    formatValue: (value: number) => `${value.toFixed(1)}%`,
-  },
 ] as const;
 
 export default function Dashboard() {
@@ -82,7 +75,6 @@ export default function Dashboard() {
     totalProperties: 0,
     totalCategories: 0,
   });
-  const [averageRoi, setAverageRoi] = useState(0);
   const [recentContacts, setRecentContacts] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,10 +84,9 @@ export default function Dashboard() {
 
     const fetchDashboardData = async () => {
       try {
-        const [summary, contacts, propertiesPayload] = await Promise.all([
+        const [summary, contacts] = await Promise.all([
           getApiData<StatsResponse>(API_ENDPOINTS.stats.summary),
           getContactMessages(),
-          getProperties(),
         ]);
 
         if (!isMounted) {
@@ -110,18 +101,8 @@ export default function Dashboard() {
           )
           .slice(0, 4);
 
-        const roiValues = propertiesPayload.data
-          .map((property) => Number.parseFloat(property.roi))
-          .filter((value): value is number => Number.isFinite(value));
-
-        const roiAverage = roiValues.length
-          ? roiValues.reduce((total, value) => total + value, 0) /
-            roiValues.length
-          : 0;
-
         setStats(summary);
         setRecentContacts(sortedContacts);
-        setAverageRoi(roiAverage);
       } catch (err) {
         console.error("Failed to load admin dashboard data:", err);
         if (isMounted) {
@@ -173,7 +154,6 @@ export default function Dashboard() {
   const summaryValues = [
     stats.totalProperties,
     stats.totalCategories,
-    averageRoi,
   ] as const;
 
   return (
@@ -212,7 +192,7 @@ export default function Dashboard() {
         })}
       </section>
 
-      <section className="mt-12 grid gap-6 xl:grid-cols-3">
+      <section className="mt-12 grid gap-6 xl:grid-cols-2">
         {summaryCardStyles.map((card, index) => (
           <article
             key={card.label}
