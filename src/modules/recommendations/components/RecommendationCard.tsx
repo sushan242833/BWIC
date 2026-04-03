@@ -3,10 +3,13 @@ import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 
-const formatCurrency = (value?: string) => {
-  if (!value) return "Price on request";
+const formatCurrency = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "")
+    return "Price on request";
 
-  const numeric = Number.parseFloat(value.replace(/,/g, ""));
+  const normalized =
+    typeof value === "number" ? value : value.replace(/,/g, "");
+  const numeric = Number.parseFloat(String(normalized));
   if (Number.isNaN(numeric)) return `NPR ${value}`;
 
   return `NPR ${new Intl.NumberFormat("en-US", {

@@ -6,10 +6,13 @@ import { formatPropertyReference } from "@/modules/properties/reference";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
 
-const formatCurrency = (value?: string) => {
-  if (!value) return "Price on request";
+const formatCurrency = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "")
+    return "Price on request";
 
-  const numeric = Number.parseFloat(value.replace(/,/g, ""));
+  const normalized =
+    typeof value === "number" ? value : value.replace(/,/g, "");
+  const numeric = Number.parseFloat(String(normalized));
   if (Number.isNaN(numeric)) return `NPR ${value}`;
 
   return `NPR ${new Intl.NumberFormat("en-US", {
@@ -17,10 +20,13 @@ const formatCurrency = (value?: string) => {
   }).format(numeric)}`;
 };
 
-const formatArea = (value?: string) => {
-  if (!value) return "Area unavailable";
+const formatArea = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === "")
+    return "Area unavailable";
 
-  const numeric = Number.parseFloat(value.replace(/,/g, ""));
+  const normalized =
+    typeof value === "number" ? value : value.replace(/,/g, "");
+  const numeric = Number.parseFloat(String(normalized));
   if (Number.isNaN(numeric)) return `${value} sq ft`;
 
   return `${new Intl.NumberFormat("en-US", {
