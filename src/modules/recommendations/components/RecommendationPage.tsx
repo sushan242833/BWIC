@@ -19,9 +19,11 @@ import {
   RECOMMENDATION_RANGE_LIMITS,
 } from "@/modules/recommendations/constants";
 import type {
+  RecommendationDetectedEntity,
   RecommendationItem,
   RecommendationLocationSuggestion,
   RecommendationPagination,
+  RecommendationParsedBriefMetadata,
   RecommendationPlaceDetails,
   RecommendationPreferences,
 } from "@/modules/recommendations/types";
@@ -46,6 +48,31 @@ const formatNumber = (value: string, maximumFractionDigits = 1) => {
   }).format(numeric);
 };
 
+const formatMetricValue = (value: number, suffix = "") => {
+  const formatted = new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value % 1 === 0 ? 0 : 1,
+  }).format(value);
+
+  return suffix ? `${formatted}${suffix}` : formatted;
+};
+
+const getRangeInputValue = (value: string, fallback: number) =>
+  value.trim() ? value : String(fallback);
+
+const formatOptionalRangeValue = (value: string, suffix = "") => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "Any";
+  }
+
+  return formatMetricValue(Number.parseFloat(trimmed), suffix);
+};
+
+const formatCurrencyValue = (value: number) =>
+  `NPR ${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(value)}`;
+
 const buildRangeBackground = (value: string, min: number, max: number) => {
   const numeric = Number.parseFloat(value);
   const normalized = Number.isNaN(numeric) ? min : numeric;
@@ -57,6 +84,106 @@ const buildRangeBackground = (value: string, min: number, max: number) => {
   };
 };
 
+const hasStructuredPreferences = (value: RecommendationPreferences) =>
+  Boolean(
+    value.location.trim() ||
+      value.price.trim() ||
+      value.area.trim() ||
+      Number.parseFloat(value.roi) > 0 ||
+      Number.parseFloat(value.maxDistanceFromHighway) > 0,
+  );
+
+const formatDetectedEntity = (entity: RecommendationDetectedEntity): string => {
+  switch (entity.type) {
+    case "category":
+      return `Category: ${String(entity.value)}`;
+    case "location":
+      return `Location: ${String(entity.value)}`;
+    case "maxPrice":
+      return `Budget up to ${formatCurrencyValue(Number(entity.value))}`;
+    case "preferredPrice":
+      return `Preferred price ${formatCurrencyValue(Number(entity.value))}`;
+    case "minRoi":
+      return `ROI at least ${formatMetricValue(Number(entity.value), "%")}`;
+    case "preferredRoi":
+      return `Preferred ROI ${formatMetricValue(Number(entity.value), "%")}`;
+    case "minArea":
+      return `Area at least ${formatMetricValue(Number(entity.value))} sq ft`;
+    case "preferredArea":
+      return `Preferred area ${formatMetricValue(Number(entity.value))} sq ft`;
+    case "maxDistanceFromHighway":
+      return `Highway distance up to ${formatMetricValue(Number(entity.value))} km`;
+    case "status":
+      return `Status: ${String(entity.value)}`;
+    default:
+      return String(entity.value);
+  }
+};
+
+const buildAppliedSummary = (
+  metadata: RecommendationParsedBriefMetadata | null,
+): string[] => {
+  if (!metadata) {
+    return [];
+  }
+
+  const summary: string[] = [];
+  const { appliedFilters, appliedPreferences } = metadata;
+
+  if (appliedFilters.category) {
+    summary.push(`Category: ${appliedFilters.category}`);
+  }
+
+  if (appliedFilters.location) {
+    summary.push(`Location: ${appliedFilters.location}`);
+  }
+
+  if (appliedFilters.maxPrice !== undefined) {
+    summary.push(`Budget up to ${formatCurrencyValue(appliedFilters.maxPrice)}`);
+  }
+
+  if (appliedFilters.minRoi !== undefined) {
+    summary.push(`ROI at least ${formatMetricValue(appliedFilters.minRoi, "%")}`);
+  } else if (appliedPreferences.roi !== undefined && appliedPreferences.roi > 0) {
+    summary.push(`Preferred ROI ${formatMetricValue(appliedPreferences.roi, "%")}`);
+  }
+
+  if (appliedFilters.minArea !== undefined) {
+    summary.push(`Area at least ${formatMetricValue(appliedFilters.minArea)} sq ft`);
+  } else if (appliedPreferences.area !== undefined && appliedPreferences.area > 0) {
+    summary.push(
+      `Preferred area ${formatMetricValue(appliedPreferences.area)} sq ft`,
+    );
+  }
+
+  if (appliedFilters.maxDistanceFromHighway !== undefined) {
+    summary.push(
+      `Highway distance up to ${formatMetricValue(
+        appliedFilters.maxDistanceFromHighway,
+      )} km`,
+    );
+  } else if (
+    appliedPreferences.maxDistanceFromHighway !== undefined &&
+    appliedPreferences.maxDistanceFromHighway > 0
+  ) {
+    summary.push(
+      `Preferred highway distance ${formatMetricValue(
+        appliedPreferences.maxDistanceFromHighway,
+      )} km`,
+    );
+  }
+
+  if (
+    appliedPreferences.price !== undefined &&
+    appliedPreferences.price > 0 &&
+    appliedFilters.maxPrice === undefined
+  ) {
+    summary.push(`Preferred price ${formatCurrencyValue(appliedPreferences.price)}`);
+  }
+
+  return summary;
+};
+
 const RecommendationPage = () => {
   const resultsRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
@@ -66,6 +193,9 @@ const RecommendationPage = () => {
   );
   const [appliedPreferences, setAppliedPreferences] =
     useState<RecommendationPreferences>(defaultRecommendationPreferences);
+  const [appliedBrief, setAppliedBrief] = useState("");
+  const [recommendationMeta, setRecommendationMeta] =
+    useState<RecommendationParsedBriefMetadata | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>(
     [],
   );
@@ -91,8 +221,26 @@ const RecommendationPage = () => {
   );
 
   const hasAppliedPreferences = useMemo(
-    () => Object.values(appliedPayload).some((value) => value !== undefined),
-    [appliedPayload],
+    () =>
+      Boolean(appliedBrief.trim()) || hasStructuredPreferences(appliedPreferences),
+    [appliedBrief, appliedPreferences],
+  );
+
+  const appliedSummary = useMemo(
+    () => buildAppliedSummary(recommendationMeta),
+    [recommendationMeta],
+  );
+
+  const shouldShowParsedSummary = useMemo(
+    () =>
+      Boolean(
+        recommendationMeta &&
+          (recommendationMeta.brief ||
+            recommendationMeta.detectedEntities.length > 0 ||
+            recommendationMeta.warnings.length > 0 ||
+            appliedSummary.length > 0),
+      ),
+    [appliedSummary, recommendationMeta],
   );
 
   const requiresLocationSelection =
@@ -105,6 +253,7 @@ const RecommendationPage = () => {
         setError("");
 
         const response = await getRecommendations({
+          brief: appliedBrief,
           preferences: {
             ...appliedPayload,
             ...(appliedPlaceDetails?.location
@@ -119,6 +268,7 @@ const RecommendationPage = () => {
         });
 
         setRecommendations(Array.isArray(response.data) ? response.data : []);
+        setRecommendationMeta(response.meta?.parsedBrief ?? null);
         setPagination((prev) =>
           response.pagination
             ? response.pagination
@@ -133,6 +283,7 @@ const RecommendationPage = () => {
       } catch (fetchError) {
         console.error("Failed to fetch recommendations:", fetchError);
         setRecommendations([]);
+        setRecommendationMeta(null);
         setError(
           fetchError instanceof Error
             ? fetchError.message
@@ -144,7 +295,13 @@ const RecommendationPage = () => {
     };
 
     void fetchRecommendations();
-  }, [appliedPayload, appliedPlaceDetails, pagination.page, pagination.limit]);
+  }, [
+    appliedBrief,
+    appliedPayload,
+    appliedPlaceDetails,
+    pagination.page,
+    pagination.limit,
+  ]);
 
   useEffect(() => {
     if (!shouldFetchLocationSuggestions(preferences.location)) {
@@ -184,7 +341,7 @@ const RecommendationPage = () => {
   }, []);
 
   const handlePreferenceChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = event.target;
     setPreferences((prev) => ({ ...prev, [name]: value }));
@@ -219,6 +376,7 @@ const RecommendationPage = () => {
     }
 
     setAppliedPreferences(preferences);
+    setAppliedBrief(preferences.brief.trim());
     setAppliedPlaceDetails(selectedPlaceDetails);
     setPagination((prev) => ({ ...prev, page: 1 }));
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -227,6 +385,8 @@ const RecommendationPage = () => {
   const clearBrief = () => {
     setPreferences(DEFAULT_RECOMMENDATION_FORM_VALUES);
     setAppliedPreferences(defaultRecommendationPreferences);
+    setAppliedBrief("");
+    setRecommendationMeta(null);
     setSelectedPlaceId("");
     setSelectedPlaceDetails(null);
     setAppliedPlaceDetails(null);
@@ -284,6 +444,22 @@ const RecommendationPage = () => {
           onSubmit={handleSubmit}
           className="grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-3"
         >
+          <div className="space-y-3 lg:col-span-3">
+            <label className={labelClassName}>Free-Text Property Brief</label>
+            <textarea
+              name="brief"
+              value={preferences.brief}
+              onChange={handlePreferenceChange}
+              placeholder={RECOMMENDATION_FORM_TEXT.briefPlaceholder}
+              className={`${formFieldClassName} min-h-[140px] resize-y`}
+            />
+            <p className="font-auth-body text-sm text-[#5b6275]">
+              Type a natural-language brief, keep using the structured fields
+              below, or combine both. Structured inputs override parsed brief
+              values when they overlap.
+            </p>
+          </div>
+
           <div className="space-y-3">
             <label className={labelClassName}>Preferred Location</label>
             <div className="relative" ref={locationRef}>
@@ -347,7 +523,7 @@ const RecommendationPage = () => {
             <div className="flex items-center justify-between gap-3">
               <label className={labelClassName}>Target ROI (%)</label>
               <span className="font-auth-headline text-2xl font-semibold text-[#004ac6]">
-                {formatNumber(preferences.roi)}%
+                {formatOptionalRangeValue(preferences.roi, "%")}
               </span>
             </div>
             <input
@@ -356,11 +532,17 @@ const RecommendationPage = () => {
               min={RECOMMENDATION_RANGE_LIMITS.roi.min}
               max={RECOMMENDATION_RANGE_LIMITS.roi.max}
               step={RECOMMENDATION_RANGE_LIMITS.roi.step}
-              value={preferences.roi}
+              value={getRangeInputValue(
+                preferences.roi,
+                RECOMMENDATION_RANGE_LIMITS.roi.min,
+              )}
               onChange={handlePreferenceChange}
               className="properties-range w-full"
               style={buildRangeBackground(
-                preferences.roi,
+                getRangeInputValue(
+                  preferences.roi,
+                  RECOMMENDATION_RANGE_LIMITS.roi.min,
+                ),
                 RECOMMENDATION_RANGE_LIMITS.roi.min,
                 RECOMMENDATION_RANGE_LIMITS.roi.max,
               )}
@@ -385,7 +567,10 @@ const RecommendationPage = () => {
                 Max Distance From Highway (km)
               </label>
               <span className="font-auth-headline text-2xl font-semibold text-[#004ac6]">
-                {formatNumber(preferences.maxDistanceFromHighway)} km
+                {formatOptionalRangeValue(
+                  preferences.maxDistanceFromHighway,
+                  " km",
+                )}
               </span>
             </div>
             <input
@@ -394,11 +579,17 @@ const RecommendationPage = () => {
               min={RECOMMENDATION_RANGE_LIMITS.distance.min}
               max={RECOMMENDATION_RANGE_LIMITS.distance.max}
               step={RECOMMENDATION_RANGE_LIMITS.distance.step}
-              value={preferences.maxDistanceFromHighway}
+              value={getRangeInputValue(
+                preferences.maxDistanceFromHighway,
+                RECOMMENDATION_RANGE_LIMITS.distance.min,
+              )}
               onChange={handlePreferenceChange}
               className="properties-range w-full"
               style={buildRangeBackground(
-                preferences.maxDistanceFromHighway,
+                getRangeInputValue(
+                  preferences.maxDistanceFromHighway,
+                  RECOMMENDATION_RANGE_LIMITS.distance.min,
+                ),
                 RECOMMENDATION_RANGE_LIMITS.distance.min,
                 RECOMMENDATION_RANGE_LIMITS.distance.max,
               )}
@@ -440,6 +631,73 @@ const RecommendationPage = () => {
             </div>
           )}
         </div>
+
+        {shouldShowParsedSummary && recommendationMeta && (
+          <div className="mt-8 rounded-[24px] border border-[#dbe6ff] bg-[#f7f9ff] p-6">
+            <div className="space-y-2">
+              <h3 className="font-auth-headline text-2xl font-semibold text-[#131b2e]">
+                Request Summary
+              </h3>
+              {recommendationMeta.brief && (
+                <p className="font-auth-body text-sm leading-7 text-[#5b6275]">
+                  &quot;{recommendationMeta.brief}&quot;
+                </p>
+              )}
+            </div>
+
+            {recommendationMeta.detectedEntities.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-3 font-auth-body text-xs font-semibold uppercase tracking-[0.16em] text-[#5b6275]">
+                  Detected Entities
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {recommendationMeta.detectedEntities.map((entity) => (
+                    <span
+                      key={`${entity.type}-${entity.raw}`}
+                      className="rounded-full border border-[#d6defb] bg-white px-4 py-2 font-auth-body text-sm text-[#283044]"
+                    >
+                      {formatDetectedEntity(entity)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {appliedSummary.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-3 font-auth-body text-xs font-semibold uppercase tracking-[0.16em] text-[#5b6275]">
+                  Applied Filters And Preferences
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {appliedSummary.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-[#bfd0ff] bg-[#eef3ff] px-4 py-2 font-auth-body text-sm font-medium text-[#004ac6]"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recommendationMeta.warnings.length > 0 && (
+              <div className="mt-5 space-y-3">
+                <p className="font-auth-body text-xs font-semibold uppercase tracking-[0.16em] text-[#8a5a00]">
+                  Warnings
+                </p>
+                {recommendationMeta.warnings.map((warning) => (
+                  <div
+                    key={warning}
+                    className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 font-auth-body text-sm text-amber-900"
+                  >
+                    {warning}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <div ref={resultsRef} className="mt-20">

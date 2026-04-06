@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import router from "next/router";
 import {
   ChevronDown,
@@ -6,6 +11,7 @@ import {
   ChevronRight,
   Eye,
   Pencil,
+  Search,
   Trash2,
 } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
@@ -143,6 +149,8 @@ const SortChevron = () => (
 export default function PropertiesTable() {
   const [properties, setProperties] = useState<PropertySummary[]>([]);
   const [filters, setFilters] = useState<PropertyFilters>(defaultFilters);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,6 +164,7 @@ export default function PropertiesTable() {
       const firstPage = await getProperties({
         page: 1,
         limit: PROPERTY_FETCH_LIMIT,
+        search: appliedSearchTerm || undefined,
       });
 
       const firstBatch = firstPage.data ?? [];
@@ -171,6 +180,7 @@ export default function PropertiesTable() {
           getProperties({
             page: index + 2,
             limit: PROPERTY_FETCH_LIMIT,
+            search: appliedSearchTerm || undefined,
           }),
         ),
       );
@@ -187,7 +197,7 @@ export default function PropertiesTable() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [appliedSearchTerm]);
 
   useEffect(() => {
     void fetchProperties();
@@ -270,6 +280,12 @@ export default function PropertiesTable() {
       }));
     };
 
+  const handleSearchSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+    setCurrentPage(1);
+    setAppliedSearchTerm(searchTerm.trim());
+  };
+
   const handleDelete = async (propertyId: number) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this property?",
@@ -346,7 +362,34 @@ export default function PropertiesTable() {
     <section className="px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-[1500px]">
         <div className="rounded-[2rem] bg-white p-5 shadow-[0_24px_70px_rgba(19,27,46,0.06)] sm:p-8">
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-6">
+            <label className="block lg:col-span-2">
+              <span className="mb-3 ml-1 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#1b2236]">
+                Search
+              </span>
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex flex-col gap-3 sm:flex-row"
+              >
+                <span className="relative block flex-1">
+                  <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#5b6275]" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by property ID, name, or location..."
+                    className="h-14 w-full rounded-2xl border border-transparent bg-[#dfe5ff] pl-14 pr-5 text-[1rem] font-medium text-[#131b2e] outline-none transition placeholder:text-[#5b6275] focus:border-[#b9c8ff] focus:bg-white focus:ring-4 focus:ring-[#004ac6]/10"
+                  />
+                </span>
+                <button
+                  type="submit"
+                  className="h-14 rounded-2xl bg-[#004ac6] px-6 text-sm font-bold uppercase tracking-[0.14em] text-white transition hover:bg-[#003da4]"
+                >
+                  Search
+                </button>
+              </form>
+            </label>
+
             <label className="block">
               <span className="mb-3 ml-1 block text-xs font-extrabold uppercase tracking-[0.12em] text-[#1b2236]">
                 Location
@@ -411,7 +454,11 @@ export default function PropertiesTable() {
             <div className="flex items-end">
               <button
                 type="button"
-                onClick={() => setFilters(defaultFilters)}
+                onClick={() => {
+                  setFilters(defaultFilters);
+                  setSearchTerm("");
+                  setAppliedSearchTerm("");
+                }}
                 className="h-14 w-full rounded-2xl bg-[#dfe5ff] px-5 text-[1rem] font-bold text-[#131b2e] transition hover:bg-[#d1d9ff]"
               >
                 Clear All Filters

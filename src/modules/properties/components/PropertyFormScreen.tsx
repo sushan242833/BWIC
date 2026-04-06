@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useId, useRef } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import {
   ArrowLeft,
   Bold,
@@ -205,7 +205,30 @@ export default function PropertyFormScreen({
 }: PropertyFormScreenProps) {
   const fileInputId = useId();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const locationFieldRef = useRef<HTMLLabelElement | null>(null);
   const canUploadMore = previewImages.length < PROPERTY_IMAGE_UPLOAD_LIMIT;
+
+  useEffect(() => {
+    if (!isLocationDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDownOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        locationFieldRef.current &&
+        !locationFieldRef.current.contains(target)
+      ) {
+        onLocationDropdownOpenChange(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDownOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDownOutside);
+    };
+  }, [isLocationDropdownOpen, onLocationDropdownOpenChange]);
 
   const applyDescriptionFormat = (action: DescriptionAction) => {
     const textarea = textareaRef.current;
@@ -257,7 +280,7 @@ export default function PropertyFormScreen({
   };
 
   return (
-    <section className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+    <section className="relative overflow-visible px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_top_left,rgba(75,65,225,0.12),transparent_38%),radial-gradient(circle_at_top_right,rgba(0,74,198,0.08),transparent_32%)]" />
 
       <div className="relative mx-auto max-w-[1280px]">
@@ -285,7 +308,7 @@ export default function PropertyFormScreen({
         </div>
 
         <form onSubmit={onSubmit} className="mt-8 space-y-7 lg:space-y-8">
-          <section className={panelClassName}>
+          <section className={`${panelClassName} overflow-visible`}>
             <div className={sectionHeaderClassName}>
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#004ac6] shadow-[0_10px_24px_rgba(0,74,198,0.12)]">
                 <Info className="h-5 w-5" />
@@ -352,7 +375,10 @@ export default function PropertyFormScreen({
                 ) : null}
               </label>
 
-              <label className="relative block lg:col-span-3">
+              <label
+                ref={locationFieldRef}
+                className="relative z-30 block lg:col-span-3"
+              >
                 <span className={labelClassName}>
                   {PROPERTY_FORM_TEXT.locationLabel}
                 </span>
@@ -362,13 +388,15 @@ export default function PropertyFormScreen({
                   value={locationQuery}
                   onChange={onLocationQueryChange}
                   onFocus={() => onLocationDropdownOpenChange(true)}
-                  onBlur={() => onLocationDropdownOpenChange(false)}
                   placeholder={PROPERTY_FORM_TEXT.locationPlaceholder}
                   className={`${getFieldClassName(Boolean(errors.location))} pl-12`}
                 />
 
                 {isLocationDropdownOpen ? (
-                  <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-[#dbe3fb] bg-white shadow-[0_18px_45px_rgba(19,27,46,0.12)]">
+                  <div
+                    className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-[#dbe3fb] bg-white shadow-[0_18px_45px_rgba(19,27,46,0.12)]"
+                    onMouseDown={(event) => event.preventDefault()}
+                  >
                     {locationLoading ? (
                       <div className="flex items-center gap-3 px-4 py-4 text-sm text-[#5d6a83]">
                         <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -383,21 +411,25 @@ export default function PropertyFormScreen({
                     ) : null}
 
                     {!locationLoading &&
-                      locationSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.placeId}
-                          type="button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => onLocationSelect(suggestion)}
-                          className={`block w-full px-4 py-3 text-left text-sm transition ${
-                            selectedLocationPlaceId === suggestion.placeId
-                              ? "bg-[#eef2ff] font-semibold text-[#004ac6]"
-                              : "text-[#24314d] hover:bg-[#f7f9ff]"
-                          }`}
-                        >
-                          {suggestion.description}
-                        </button>
-                      ))}
+                      locationSuggestions.length > 0 ? (
+                        <div className="max-h-72 overflow-y-auto overscroll-contain py-1">
+                          {locationSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.placeId}
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => onLocationSelect(suggestion)}
+                              className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                selectedLocationPlaceId === suggestion.placeId
+                                  ? "bg-[#eef2ff] font-semibold text-[#004ac6]"
+                                  : "text-[#24314d] hover:bg-[#f7f9ff]"
+                              }`}
+                            >
+                              {suggestion.description}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                   </div>
                 ) : null}
 

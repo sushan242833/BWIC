@@ -16,11 +16,12 @@ export const DEFAULT_RECOMMENDATION_PAGINATION: RecommendationPagination = {
 };
 
 export const DEFAULT_RECOMMENDATION_FORM_VALUES: RecommendationPreferences = {
+  brief: "",
   location: "",
   price: "",
-  roi: "0",
+  roi: "",
   area: "",
-  maxDistanceFromHighway: "0",
+  maxDistanceFromHighway: "",
 };
 
 export const RECOMMENDATION_RANGE_LIMITS = {
@@ -53,6 +54,8 @@ export const RECOMMENDATION_SCORE_LABELS = {
 } as const;
 
 export const RECOMMENDATION_FORM_TEXT = {
+  briefPlaceholder:
+    "Need a home in Kathmandu under 1.2 crore near highway",
   locationPlaceholder: "Select a city",
   locationLoading: "Loading locations...",
   locationEmpty: "No locations found",

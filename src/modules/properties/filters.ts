@@ -38,6 +38,7 @@ export const defaultPropertyFilters: PropertyFilters = {
 export const defaultPropertySort: PropertySortValue = "newest";
 
 export interface PropertyFilterQuery extends Partial<PropertyFilters> {
+  search?: string;
   sort?: PropertySortValue;
   page?: number;
   limit?: number;

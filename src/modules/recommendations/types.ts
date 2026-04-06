@@ -5,6 +5,7 @@ import type {
 import type { PropertySummary } from "@/modules/properties/types";
 
 export interface RecommendationPreferences {
+  brief: string;
   location: string;
   price: string;
   roi: string;
@@ -13,12 +14,27 @@ export interface RecommendationPreferences {
 }
 
 export interface RecommendationQuery {
+  brief?: string;
+  mustHave?: Partial<RecommendationMustHavePayload>;
   preferences?: Partial<RecommendationPreferencesPayload>;
   page?: number;
   limit?: number;
 }
 
+export interface RecommendationMustHavePayload {
+  categoryId?: number;
+  category?: string;
+  location?: string;
+  maxPrice?: number;
+  minRoi?: number;
+  minArea?: number;
+  maxDistanceFromHighway?: number;
+  status?: string;
+}
+
 export interface RecommendationPreferencesPayload {
+  categoryId?: number;
+  category?: string;
   location?: string;
   latitude?: number;
   longitude?: number;
@@ -26,6 +42,37 @@ export interface RecommendationPreferencesPayload {
   roi?: number;
   area?: number;
   maxDistanceFromHighway?: number;
+  status?: string;
+}
+
+export interface RecommendationDetectedEntity {
+  type:
+    | "category"
+    | "location"
+    | "maxPrice"
+    | "preferredPrice"
+    | "minRoi"
+    | "preferredRoi"
+    | "minArea"
+    | "preferredArea"
+    | "maxDistanceFromHighway"
+    | "status";
+  value: string | number;
+  raw: string;
+}
+
+export interface RecommendationParsedBriefMetadata {
+  brief?: string;
+  detectedEntities: RecommendationDetectedEntity[];
+  parsedMustHave: RecommendationMustHavePayload;
+  parsedPreferences: RecommendationPreferencesPayload;
+  appliedFilters: RecommendationMustHavePayload;
+  appliedPreferences: RecommendationPreferencesPayload;
+  warnings: string[];
+}
+
+export interface RecommendationResponseMeta {
+  parsedBrief: RecommendationParsedBriefMetadata;
 }
 
 export type RecommendationLocationSuggestion = LocationSuggestion;
@@ -71,9 +118,11 @@ export interface RecommendationResponse {
   message: string;
   data: RecommendationItem[];
   pagination?: RecommendationPagination;
+  meta?: RecommendationResponseMeta;
 }
 
 export const defaultRecommendationPreferences: RecommendationPreferences = {
+  brief: "",
   location: "",
   price: "",
   roi: "",

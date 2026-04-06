@@ -1,10 +1,4 @@
-import React, {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import {
   ChevronDown,
@@ -12,6 +6,7 @@ import {
   ChevronRight,
   Search,
   SearchX,
+  SlidersHorizontal,
 } from "lucide-react";
 import { capitalize } from "@/utils/Capitalize";
 import { APP_ROUTES } from "@/config/routes";
@@ -24,6 +19,7 @@ import {
 } from "@/modules/locations/api";
 import { getProperties } from "@/modules/properties/api";
 import {
+  countActivePropertyFilters,
   defaultPropertyFilters,
   defaultPropertySort,
   type PropertyFilters,
@@ -174,6 +170,8 @@ const Properties = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
     LocationSuggestion[]
@@ -184,8 +182,6 @@ const Properties = () => {
   const [highwayDistanceKm, setHighwayDistanceKm] = useState(
     DEFAULT_HIGHWAY_DISTANCE_KM,
   );
-
-  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -208,6 +204,7 @@ const Properties = () => {
 
         const response = (await getProperties({
           ...appliedFilters,
+          search: appliedSearchTerm || undefined,
           sort: defaultPropertySort,
           page: pagination.page,
           limit: pagination.limit,
@@ -233,7 +230,7 @@ const Properties = () => {
     };
 
     void fetchProperties();
-  }, [appliedFilters, pagination.page, pagination.limit]);
+  }, [appliedFilters, appliedSearchTerm, pagination.page, pagination.limit]);
 
   useEffect(() => {
     if (!shouldFetchLocationSuggestions(locationQuery)) {
@@ -257,32 +254,28 @@ const Properties = () => {
     return () => window.clearTimeout(timeout);
   }, [locationQuery]);
 
-  const displayedProperties = useMemo(() => {
-    const normalizedTerm = deferredSearchTerm.trim().toLowerCase();
-
-    if (!normalizedTerm) {
-      return properties;
-    }
-
-    return properties.filter((property) => {
-      const searchableFields = [
-        String(property.id),
-        property.title,
-        property.location,
-        property.description,
-        property.category?.name ?? "",
-      ];
-
-      return searchableFields.some((value) =>
-        value.toLowerCase().includes(normalizedTerm),
-      );
-    });
-  }, [deferredSearchTerm, properties]);
-
   const paginationItems = useMemo(
     () => buildPaginationItems(pagination.page, pagination.totalPages),
     [pagination.page, pagination.totalPages],
   );
+  const activeFilterCount = useMemo(
+    () => countActivePropertyFilters(appliedFilters),
+    [appliedFilters],
+  );
+
+  const handleSearchSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+    setPagination((currentPagination) =>
+      currentPagination.page === 1
+        ? currentPagination
+        : {
+            ...currentPagination,
+            page: 1,
+          },
+    );
+    setAppliedSearchTerm(searchTerm.trim());
+    propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleFilterChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -342,6 +335,7 @@ const Properties = () => {
     setFilters(defaultPropertyFilters);
     setAppliedFilters(defaultPropertyFilters);
     setSearchTerm("");
+    setAppliedSearchTerm("");
     setLocationQuery("");
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
@@ -367,7 +361,7 @@ const Properties = () => {
     propertyListRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const showEmptyState = !loading && !error && displayedProperties.length === 0;
+  const showEmptyState = !loading && !error && properties.length === 0;
 
   return (
     <section className="bg-[radial-gradient(circle_at_top_left,rgba(75,65,225,0.08),transparent_32%),linear-gradient(180deg,#f7f6ff_0%,#faf8ff_100%)] font-auth-body text-[#131b2e]">
@@ -389,23 +383,52 @@ const Properties = () => {
               </p>
             </div>
 
-            <div className="w-full lg:max-w-[320px]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0b46cf]" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search property name, ID, or keywords..."
-                  className="h-11 w-full rounded-2xl border border-[#e6e8f2] bg-white pl-11 pr-4 text-[14px] text-[#131b2e] shadow-[0_10px_26px_rgba(19,27,46,0.05)] outline-none transition placeholder:text-[#8a8fa1] focus:border-[#bfd0ff] focus:ring-4 focus:ring-[#004ac6]/10"
-                />
-              </div>
+            <div className="w-full lg:max-w-[430px]">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex flex-col gap-3 sm:flex-row"
+              >
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0b46cf]" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by property ID, name, or location..."
+                    className="h-11 w-full rounded-2xl border border-[#e6e8f2] bg-white pl-11 pr-4 text-[14px] text-[#131b2e] shadow-[0_10px_26px_rgba(19,27,46,0.05)] outline-none transition placeholder:text-[#8a8fa1] focus:border-[#bfd0ff] focus:ring-4 focus:ring-[#004ac6]/10"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFilterPanelOpen((current) => !current);
+                    setIsLocationDropdownOpen(false);
+                  }}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-[12px] font-bold uppercase tracking-[0.18em] transition ${
+                    isFilterPanelOpen
+                      ? "border-[#0b46cf] bg-[#eef1ff] text-[#0b46cf]"
+                      : "border-[#e6e8f2] bg-white text-[#0b46cf] shadow-[0_10px_26px_rgba(19,27,46,0.05)] hover:border-[#bfd0ff]"
+                  }`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filter
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-[#0b46cf] px-2 py-0.5 text-[10px] tracking-normal text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <button type="submit" className="sr-only">
+                  Search
+                </button>
+              </form>
             </div>
           </div>
         </header>
 
-        <section className="mb-10 rounded-[20px] border border-[#ebe9f6] bg-white/90 p-6 shadow-[0_18px_40px_rgba(19,27,46,0.05)] backdrop-blur-sm md:mb-12 md:p-7">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
+        {isFilterPanelOpen && (
+          <section className="mb-10 rounded-[20px] border border-[#ebe9f6] bg-white/90 p-6 shadow-[0_18px_40px_rgba(19,27,46,0.05)] backdrop-blur-sm md:mb-12 md:p-7">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
             <div className="space-y-2 xl:col-span-2">
               <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
                 Location
@@ -531,7 +554,7 @@ const Properties = () => {
             </div>
           </div>
 
-          <div className="mt-7 grid grid-cols-1 items-end gap-5 border-t border-[#eceffc] pt-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_auto]">
+            <div className="mt-7 grid grid-cols-1 items-end gap-5 border-t border-[#eceffc] pt-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_auto]">
             <div className="space-y-2">
               <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
                 Minimum Area (Sq. Ft.)
@@ -587,11 +610,12 @@ const Properties = () => {
                 onClick={handleApplyFilters}
                 className="h-11 rounded-xl bg-[linear-gradient(135deg,#0b46cf_0%,#4b41e1_100%)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_20px_rgba(11,70,207,0.22)] transition hover:brightness-[1.03]"
               >
-                Apply Search
+                Apply Filters
               </button>
             </div>
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
 
         <div
           ref={propertyListRef}
@@ -636,7 +660,7 @@ const Properties = () => {
 
           {!loading &&
             !error &&
-            displayedProperties.map((property, index) => {
+            properties.map((property) => {
               const areaDisplay = getAreaDisplay(property);
               const primaryImage =
                 property.primaryImage ?? property.images?.[0];

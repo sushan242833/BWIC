@@ -4,6 +4,7 @@ type ApiSuccessResponse<T> = {
   success: boolean;
   message: string;
   data: T;
+  meta?: unknown;
   pagination?: {
     page: number;
     limit: number;
