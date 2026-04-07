@@ -136,6 +136,8 @@ const buildAppliedSummary = (
 
   if (appliedFilters.location) {
     summary.push(`Location: ${appliedFilters.location}`);
+  } else if (appliedPreferences.location) {
+    summary.push(`Preferred location: ${appliedPreferences.location}`);
   }
 
   if (appliedFilters.maxPrice !== undefined) {
@@ -247,6 +249,14 @@ const RecommendationPage = () => {
     preferences.location.trim().length > 0 && !selectedPlaceId;
 
   useEffect(() => {
+    if (!hasAppliedPreferences) {
+      setRecommendations([]);
+      setRecommendationMeta(null);
+      setError("");
+      setLoading(false);
+      return;
+    }
+
     const fetchRecommendations = async () => {
       try {
         setLoading(true);
@@ -299,6 +309,7 @@ const RecommendationPage = () => {
     appliedBrief,
     appliedPayload,
     appliedPlaceDetails,
+    hasAppliedPreferences,
     pagination.page,
     pagination.limit,
   ]);
@@ -353,6 +364,21 @@ const RecommendationPage = () => {
     }
   };
 
+  const handleBriefKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    applyBrief();
+  };
+
   const handleLocationSelect = async (
     suggestion: RecommendationLocationSuggestion,
   ) => {
@@ -375,7 +401,10 @@ const RecommendationPage = () => {
       return;
     }
 
-    setAppliedPreferences(preferences);
+    setAppliedPreferences({
+      ...preferences,
+      location: selectedPlaceDetails?.primaryText ?? preferences.location,
+    });
     setAppliedBrief(preferences.brief.trim());
     setAppliedPlaceDetails(selectedPlaceDetails);
     setPagination((prev) => ({ ...prev, page: 1 }));
@@ -386,6 +415,7 @@ const RecommendationPage = () => {
     setPreferences(DEFAULT_RECOMMENDATION_FORM_VALUES);
     setAppliedPreferences(defaultRecommendationPreferences);
     setAppliedBrief("");
+    setRecommendations([]);
     setRecommendationMeta(null);
     setSelectedPlaceId("");
     setSelectedPlaceDetails(null);
@@ -450,13 +480,14 @@ const RecommendationPage = () => {
               name="brief"
               value={preferences.brief}
               onChange={handlePreferenceChange}
+              onKeyDown={handleBriefKeyDown}
               placeholder={RECOMMENDATION_FORM_TEXT.briefPlaceholder}
               className={`${formFieldClassName} min-h-[140px] resize-y`}
             />
             <p className="font-auth-body text-sm text-[#5b6275]">
-              Type a natural-language brief, keep using the structured fields
-              below, or combine both. Structured inputs override parsed brief
-              values when they overlap.
+              Press Enter to generate recommendations, or use Shift+Enter for a
+              new line. Structured inputs override parsed brief values when
+              they overlap.
             </p>
           </div>
 

@@ -39,6 +39,9 @@ const RecommendationResults = ({
   onPageChange,
 }: RecommendationResultsProps) => {
   const [topResult, ...otherResults] = recommendations;
+  const topResultRank = (pagination.page - 1) * pagination.limit + 1;
+  const showPrimePick = pagination.page === 1 && Boolean(topResult);
+  const gridResults = showPrimePick ? otherResults : recommendations;
   const pageNumbers = buildPageNumbers(
     pagination.page,
     Math.max(1, pagination.totalPages),
@@ -81,12 +84,12 @@ const RecommendationResults = ({
         <h3 className="font-auth-headline text-4xl font-bold text-[#131b2e]">
           {hasActiveFilters
             ? "No ranked matches found"
-            : "No recommended properties available"}
+            : "Add your brief to get started"}
         </h3>
         <p className="mx-auto mt-4 max-w-xl font-auth-body text-lg leading-8 text-[#5b6275]">
           {hasActiveFilters
             ? "We couldn't find properties that fit this brief. Try widening your location, budget, or area target to surface more matches."
-            : "We're refreshing our latest picks. Please check back shortly for new recommendations."}
+            : "Enter a property brief, choose a location, or set at least one preference to generate ranked recommendations."}
         </p>
       </section>
     );
@@ -95,13 +98,15 @@ const RecommendationResults = ({
   return (
     <div className="space-y-8">
       <div className="space-y-10">
-        {topResult && <TopRecommendationCard item={topResult} />}
+        {showPrimePick && topResult && (
+          <TopRecommendationCard item={topResult} rank={topResultRank} />
+        )}
 
-        {otherResults.length > 0 && (
+        {gridResults.length > 0 && (
           <section className="space-y-8">
             <div className="space-y-2">
               <h2 className="font-auth-headline text-4xl font-bold text-[#131b2e]">
-                Alternative Matches
+                {showPrimePick ? "Alternative Matches" : "Ranked Matches"}
               </h2>
               <p className="font-auth-body text-base text-[#5b6275]">
                 Showing {pagination.total || recommendations.length} ranked
@@ -110,11 +115,15 @@ const RecommendationResults = ({
             </div>
 
             <div className="grid gap-8 md:grid-cols-2">
-              {otherResults.map((item, index) => (
+              {gridResults.map((item, index) => (
                 <RecommendationCard
                   key={item.property.id}
                   item={item}
-                  rank={(pagination.page - 1) * pagination.limit + index + 2}
+                  rank={
+                    showPrimePick
+                      ? (pagination.page - 1) * pagination.limit + index + 2
+                      : (pagination.page - 1) * pagination.limit + index + 1
+                  }
                 />
               ))}
             </div>

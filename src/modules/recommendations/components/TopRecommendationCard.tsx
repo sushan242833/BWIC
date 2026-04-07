@@ -52,11 +52,17 @@ const formatScore = (value: number) =>
 
 interface TopRecommendationCardProps {
   item: RecommendationItem;
+  rank: number;
 }
 
-const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
+const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
   const image = item.property.primaryImage || item.property.images?.[0];
   const topReasons = item.topReasons.slice(0, 3);
+  const isPrimePick = rank === 1;
+  const rankLabel = isPrimePick ? "Prime Pick" : `Rank #${rank}`;
+  const reasonsHeading = isPrimePick
+    ? "Why This Ranked First"
+    : `Why This Ranked #${rank}`;
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-[#d8def3] bg-white shadow-[0_24px_70px_rgba(19,27,46,0.08)]">
@@ -83,7 +89,7 @@ const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-md bg-[#dbe1ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#22336f]">
-                Prime Pick
+                {rankLabel}
               </span>
               <span className="font-auth-body text-sm text-[#5b6275]">
                 ID: {formatPropertyReference(item.property.id)}
@@ -149,7 +155,7 @@ const TopRecommendationCard = ({ item }: TopRecommendationCardProps) => {
       <div className="grid gap-8 border-t border-[#e5e9f8] bg-[#f5f7ff] px-8 py-8 lg:grid-cols-3">
         <div className="space-y-5">
           <h3 className="font-auth-headline text-sm font-bold uppercase tracking-[0.24em] text-[#434655]">
-            Why This Ranked First
+            {reasonsHeading}
           </h3>
 
           {topReasons.length > 0 ? (
