@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import BrandLogo from "@/components/BrandLogo";
 import {
   faEnvelope,
   faGlobe,
@@ -14,9 +15,10 @@ const FooterSection: React.FC = () => {
     <footer className="border-t border-slate-200 bg-slate-50">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-6 py-16 sm:px-8 md:grid-cols-3 md:gap-16">
         <div className="max-w-xs">
-          <h2 className="mb-6 font-auth-headline text-xl font-bold text-slate-900">
-            Blue Whale Investment
-          </h2>
+          <BrandLogo
+            className="mb-6"
+            imageClassName="h-24 w-auto object-contain"
+          />
           <p className="font-auth-body text-sm leading-relaxed text-slate-500">
             Premium real estate investment platform specializing in verified
             high-yield opportunities across Nepal.

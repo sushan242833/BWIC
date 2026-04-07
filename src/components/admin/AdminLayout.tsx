@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -142,15 +143,16 @@ export default function AdminLayout({
         <div className="border-b border-white/6 px-7 pb-10 pt-9">
           <div className="flex items-start justify-between gap-4 lg:block">
             <div>
-              <Link
+              <BrandLogo
                 href={APP_ROUTES.adminDashboard}
-                className="font-auth-headline text-[1.5rem] font-extrabold tracking-[-0.04em] text-white"
-              >
-                Blue Whale Investment
-              </Link>
-              <p className="mt-3 text-xs uppercase tracking-[0.28em] text-[#7d869f]">
-                Admin Panel
-              </p>
+                className="items-start"
+                imageClassName="h-24 w-auto object-contain drop-shadow-[0_12px_36px_rgba(0,74,198,0.22)]"
+                caption={
+                  <p className="text-xs uppercase tracking-[0.28em] text-[#7d869f]">
+                    Admin Panel
+                  </p>
+                }
+              />
             </div>
             <button
               type="button"

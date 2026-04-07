@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { ReactNode } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { APP_ROUTES } from "@/config/routes";
 
 interface RecoveryShellProps {
@@ -32,14 +33,22 @@ export default function RecoveryShell({
         </div>
 
         <div className="relative z-10 flex min-h-screen flex-col px-6 py-8 sm:px-8 lg:px-12">
+          <header className="mx-auto mb-10 flex w-full max-w-screen-xl justify-center sm:justify-start">
+            <BrandLogo
+              href={APP_ROUTES.home}
+              className="items-center sm:items-start"
+              imageClassName="h-20 w-auto object-contain sm:h-24"
+            />
+          </header>
+
           <div className="mx-auto flex w-full max-w-screen-xl flex-1 items-center justify-center">
             {children}
           </div>
 
           <footer className="mt-16 border-t border-[#dfe2f1] pt-8 sm:mt-20 sm:pt-10">
             <div className="mx-auto flex max-w-screen-xl flex-col gap-6 text-center md:flex-row md:items-center md:justify-between md:text-left">
-              <div>
-                <p className="mt-2 text-sm text-[#737686]">
+              <div className="flex flex-col items-center md:items-start">
+                <p className="text-sm text-[#737686]">
                   © 2026 Blue Whale Investment.
                 </p>
               </div>

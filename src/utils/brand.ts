@@ -4,6 +4,6 @@ export interface BrandProps {
 }
 
 export const defaultBrand: BrandProps = {
-  name: "BWIC",
-  logo: "",
+  name: "Blue Whale Investment",
+  logo: "/images/logo.png",
 };

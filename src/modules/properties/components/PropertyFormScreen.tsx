@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useId, useRef } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import {
   ArrowLeft,
   Bold,
@@ -830,7 +831,13 @@ export default function PropertyFormScreen({
             </div>
             <div className="flex items-center gap-5">
               <span>{headerTitle}</span>
-              <span>Blue Whale Investment Group</span>
+              <BrandLogo
+                href={APP_ROUTES.home}
+                layout="row"
+                className="items-center gap-2 text-[#8f98af]"
+                imageClassName="h-8 w-auto object-contain opacity-70"
+                caption={<span>Investment Group</span>}
+              />
             </div>
           </div>
         </form>

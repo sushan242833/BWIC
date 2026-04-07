@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Eye, EyeOff } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthUser, USER_ROLE, UserRole } from "@/modules/auth/types";
@@ -176,12 +177,11 @@ export default function AuthPage({
           <section className="relative flex flex-1 items-center justify-center bg-white px-6 py-10 sm:px-8 lg:px-24">
             <div className="w-full max-w-md">
               <div className="mb-12 text-center md:text-left">
-                <Link
-                  href="/"
-                  className="font-auth-headline mb-2 inline-block text-2xl font-extrabold tracking-[-0.04em] text-[#131b2e]"
-                >
-                  Blue Whale Investment
-                </Link>
+                <BrandLogo
+                  href={APP_ROUTES.home}
+                  className="mb-4 items-center md:items-start"
+                  imageClassName="h-24 w-auto object-contain sm:h-28"
+                />
                 <p className="text-sm text-[#434655]">{pageCopy.subtitle}</p>
               </div>
 

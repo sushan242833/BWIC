@@ -50,7 +50,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 <img
                   src={brand.logo}
                   alt={`${brand.name} logo`}
-                  className="w-8 h-8"
+                  className="h-11 w-auto object-contain"
                 />
               ) : (
                 <span className="text-lg font-semibold">{brand.name}</span>
