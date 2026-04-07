@@ -13,10 +13,12 @@ import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
 import {
+  getLocationPlaceDetails,
   getLocationSuggestions,
   LOCATION_AUTOCOMPLETE_DEBOUNCE_MS,
   shouldFetchLocationSuggestions,
 } from "@/modules/locations/api";
+import type { LocationPlaceDetails } from "@/modules/locations/types";
 import { getProperties } from "@/modules/properties/api";
 import {
   countActivePropertyFilters,
@@ -153,6 +155,43 @@ const fieldClassName =
   "h-11 w-full rounded-xl border border-transparent bg-[#eef0ff] px-4 text-[14px] font-medium text-[#131b2e] outline-none transition placeholder:text-[#6a6f82] focus:border-[#cbd5ff] focus:bg-white focus:ring-4 focus:ring-[#004ac6]/8";
 
 const selectClassName = `${fieldClassName} appearance-none pr-11`;
+const MAX_LOCATION_FILTER_TOKENS = 5;
+
+const normalizeLocationFilterCandidate = (value?: string | null) =>
+  value?.trim().replace(/\s+/g, " ") || "";
+
+const hasUsableLocationTokenCount = (value: string) => {
+  const tokens = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return tokens.length > 0 && tokens.length <= MAX_LOCATION_FILTER_TOKENS;
+};
+
+const buildManualLocationFilterValue = (
+  details: LocationPlaceDetails | null,
+  fallbackDescription: string,
+) => {
+  const fallbackPrimaryText = fallbackDescription.split(",")[0] || "";
+  const candidates = [
+    details?.primaryText,
+    details?.address.city,
+    details?.address.district,
+    fallbackPrimaryText,
+    details?.fullAddress,
+  ]
+    .map(normalizeLocationFilterCandidate)
+    .filter(Boolean);
+
+  return (
+    candidates.find((candidate) => hasUsableLocationTokenCount(candidate)) ||
+    candidates[0] ||
+    normalizeLocationFilterCandidate(fallbackDescription)
+  );
+};
 
 const Properties = () => {
   const router = useRouter();
@@ -300,15 +339,35 @@ const Properties = () => {
     }));
   };
 
-  const handleLocationSelect = (suggestion: LocationSuggestion) => {
+  const handleLocationSelect = async (suggestion: LocationSuggestion) => {
+    const fallbackFilterValue = buildManualLocationFilterValue(
+      null,
+      suggestion.description,
+    );
+
     setSelectedLocationPlaceId(suggestion.placeId);
     setLocationQuery(suggestion.description);
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
     setFilters((currentFilters) => ({
       ...currentFilters,
-      location: suggestion.description,
+      location: fallbackFilterValue,
     }));
+
+    try {
+      const details = await getLocationPlaceDetails(suggestion.placeId);
+      const resolvedFilterValue = buildManualLocationFilterValue(
+        details,
+        suggestion.description,
+      );
+
+      setFilters((currentFilters) => ({
+        ...currentFilters,
+        location: resolvedFilterValue,
+      }));
+    } catch (fetchError) {
+      console.error("Failed to fetch property filter location details:", fetchError);
+    }
   };
 
   const handleHighwayDistanceChange = (
