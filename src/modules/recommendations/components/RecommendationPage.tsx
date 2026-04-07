@@ -666,7 +666,7 @@ const RecommendationPage = () => {
             {appliedSummary.length > 0 && (
               <div className="mt-5">
                 <p className="mb-3 font-auth-body text-xs font-semibold uppercase tracking-[0.16em] text-[#5b6275]">
-                  Applied Filters And Preferences
+                  Applied Ranking Criteria
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {appliedSummary.map((item) => (

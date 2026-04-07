@@ -366,7 +366,10 @@ const Properties = () => {
         location: resolvedFilterValue,
       }));
     } catch (fetchError) {
-      console.error("Failed to fetch property filter location details:", fetchError);
+      console.error(
+        "Failed to fetch property filter location details:",
+        fetchError,
+      );
     }
   };
 
@@ -488,190 +491,191 @@ const Properties = () => {
         {isFilterPanelOpen && (
           <section className="mb-10 rounded-[20px] border border-[#ebe9f6] bg-white/90 p-6 shadow-[0_18px_40px_rgba(19,27,46,0.05)] backdrop-blur-sm md:mb-12 md:p-7">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
-            <div className="space-y-2 xl:col-span-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                Location
-              </label>
-              <div className="relative">
-                <input
-                  name="location"
-                  value={locationQuery}
-                  onChange={handleLocationQueryChange}
-                  onFocus={() => setIsLocationDropdownOpen(true)}
-                  onBlur={() =>
-                    window.setTimeout(
-                      () => setIsLocationDropdownOpen(false),
-                      PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
-                    )
-                  }
-                  placeholder="All Locations"
-                  className={fieldClassName}
-                />
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
+              <div className="space-y-2 xl:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                  Location
+                </label>
+                <div className="relative">
+                  <input
+                    name="location"
+                    value={locationQuery}
+                    onChange={handleLocationQueryChange}
+                    onFocus={() => setIsLocationDropdownOpen(true)}
+                    onBlur={() =>
+                      window.setTimeout(
+                        () => setIsLocationDropdownOpen(false),
+                        PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
+                      )
+                    }
+                    placeholder="All Locations"
+                    className={fieldClassName}
+                  />
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
 
-                {isLocationDropdownOpen &&
-                  shouldFetchLocationSuggestions(locationQuery) && (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-[#e3e6f3] bg-white p-2 shadow-[0_16px_30px_rgba(19,27,46,0.08)]">
-                      {locationLoading && (
-                        <div className="px-3 py-2 text-sm text-[#5f6475]">
-                          Loading suggestions...
-                        </div>
-                      )}
+                  {isLocationDropdownOpen &&
+                    shouldFetchLocationSuggestions(locationQuery) && (
+                      <div className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-[#e3e6f3] bg-white p-2 shadow-[0_16px_30px_rgba(19,27,46,0.08)]">
+                        {locationLoading && (
+                          <div className="px-3 py-2 text-sm text-[#5f6475]">
+                            Loading suggestions...
+                          </div>
+                        )}
 
-                      {!locationLoading && locationSuggestions.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-[#5f6475]">
-                          No locations found
-                        </div>
-                      )}
+                        {!locationLoading &&
+                          locationSuggestions.length === 0 && (
+                            <div className="px-3 py-2 text-sm text-[#5f6475]">
+                              No locations found
+                            </div>
+                          )}
 
-                      {!locationLoading &&
-                        locationSuggestions.map((suggestion) => (
-                          <button
-                            key={suggestion.placeId}
-                            type="button"
-                            onClick={() => handleLocationSelect(suggestion)}
-                            className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                              selectedLocationPlaceId === suggestion.placeId
-                                ? "bg-[#eef0ff] text-[#0b46cf]"
-                                : "text-[#131b2e] hover:bg-[#f5f6ff]"
-                            }`}
-                          >
-                            {suggestion.description}
-                          </button>
-                        ))}
-                    </div>
-                  )}
+                        {!locationLoading &&
+                          locationSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.placeId}
+                              type="button"
+                              onClick={() => handleLocationSelect(suggestion)}
+                              className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                                selectedLocationPlaceId === suggestion.placeId
+                                  ? "bg-[#eef0ff] text-[#0b46cf]"
+                                  : "text-[#131b2e] hover:bg-[#f5f6ff]"
+                              }`}
+                            >
+                              {suggestion.description}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                  Category
+                </label>
+                <div className="relative">
+                  <select
+                    name="categoryId"
+                    value={filters.categoryId}
+                    onChange={handleFilterChange}
+                    className={selectClassName}
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {capitalize(category.name)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
+                </div>
+              </div>
+
+              <div className="space-y-2 xl:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                  Price (NPR)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    name="minPrice"
+                    value={filters.minPrice}
+                    onChange={handleFilterChange}
+                    placeholder="Min"
+                    className={fieldClassName}
+                  />
+                  <input
+                    type="number"
+                    name="maxPrice"
+                    value={filters.maxPrice}
+                    onChange={handleFilterChange}
+                    placeholder="Max"
+                    className={fieldClassName}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                  ROI (%)
+                </label>
+                <div className="relative">
+                  <select
+                    name="minRoi"
+                    value={filters.minRoi}
+                    onChange={handleFilterChange}
+                    className={selectClassName}
+                  >
+                    <option value="">Any ROI</option>
+                    {ROI_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
+                </div>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                Category
-              </label>
-              <div className="relative">
-                <select
-                  name="categoryId"
-                  value={filters.categoryId}
-                  onChange={handleFilterChange}
-                  className={selectClassName}
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {capitalize(category.name)}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
-              </div>
-            </div>
-
-            <div className="space-y-2 xl:col-span-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                Price (NPR)
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  name="minPrice"
-                  value={filters.minPrice}
-                  onChange={handleFilterChange}
-                  placeholder="Min"
-                  className={fieldClassName}
-                />
-                <input
-                  type="number"
-                  name="maxPrice"
-                  value={filters.maxPrice}
-                  onChange={handleFilterChange}
-                  placeholder="Max"
-                  className={fieldClassName}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                ROI (%)
-              </label>
-              <div className="relative">
-                <select
-                  name="minRoi"
-                  value={filters.minRoi}
-                  onChange={handleFilterChange}
-                  className={selectClassName}
-                >
-                  <option value="">Any ROI</option>
-                  {ROI_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#737686]" />
-              </div>
-            </div>
-          </div>
 
             <div className="mt-7 grid grid-cols-1 items-end gap-5 border-t border-[#eceffc] pt-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_auto]">
-            <div className="space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                Minimum Area (Sq. Ft.)
-              </label>
-              <input
-                type="number"
-                name="minArea"
-                value={filters.minArea}
-                onChange={handleFilterChange}
-                placeholder="e.g. 1500"
-                className={fieldClassName}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
+              <div className="space-y-2">
                 <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
-                  Highway Proximity (km)
+                  Minimum Area (Sq. Ft.)
                 </label>
-                <span className="rounded-full bg-[#eef0ff] px-3 py-1 text-[11px] font-semibold text-[#0b46cf]">
-                  {highwayDistanceKm} km
-                </span>
-              </div>
-              <div className="flex h-11 items-center">
                 <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.5"
-                  value={highwayDistanceKm}
-                  onChange={handleHighwayDistanceChange}
-                  aria-label="Highway proximity in kilometres"
-                  className="properties-range w-full"
-                  style={{
-                    background: `linear-gradient(90deg, #0b46cf 0%, #0b46cf ${
-                      (highwayDistanceKm / 10) * 100
-                    }%, #dbe1ff ${(highwayDistanceKm / 10) * 100}%, #dbe1ff 100%)`,
-                  }}
+                  type="number"
+                  name="minArea"
+                  value={filters.minArea}
+                  onChange={handleFilterChange}
+                  placeholder="e.g. 1500"
+                  className={fieldClassName}
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:w-[320px]">
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="h-11 rounded-xl bg-[#dbe1ff] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-[#0b46cf] transition hover:bg-[#cbd5ff]"
-              >
-                Clear Filters
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyFilters}
-                className="h-11 rounded-xl bg-[linear-gradient(135deg,#0b46cf_0%,#4b41e1_100%)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_20px_rgba(11,70,207,0.22)] transition hover:brightness-[1.03]"
-              >
-                Apply Filters
-              </button>
-            </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#131b2e]">
+                    Highway Proximity (km)
+                  </label>
+                  <span className="rounded-full bg-[#eef0ff] px-3 py-1 text-[11px] font-semibold text-[#0b46cf]">
+                    {highwayDistanceKm} km
+                  </span>
+                </div>
+                <div className="flex h-11 items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={highwayDistanceKm}
+                    onChange={handleHighwayDistanceChange}
+                    aria-label="Highway proximity in kilometres"
+                    className="properties-range w-full"
+                    style={{
+                      background: `linear-gradient(90deg, #0b46cf 0%, #0b46cf ${
+                        (highwayDistanceKm / 10) * 100
+                      }%, #dbe1ff ${(highwayDistanceKm / 10) * 100}%, #dbe1ff 100%)`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:w-[320px]">
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="h-11 rounded-xl bg-[#dbe1ff] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-[#0b46cf] transition hover:bg-[#cbd5ff]"
+                >
+                  Clear Filters
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyFilters}
+                  className="h-11 rounded-xl bg-[linear-gradient(135deg,#0b46cf_0%,#4b41e1_100%)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_20px_rgba(11,70,207,0.22)] transition hover:brightness-[1.03]"
+                >
+                  Apply Filters
+                </button>
+              </div>
             </div>
           </section>
         )}
