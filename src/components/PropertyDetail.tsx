@@ -10,15 +10,44 @@ import {
   formatPropertyStatus,
   getPropertyStatusBadgeClass,
 } from "@/modules/properties/status";
+import {
+  getSafeReturnTo,
+  isRecommendationReturnSource,
+} from "@/modules/recommendations/navigation";
 import type { PropertyDetail as PropertyDetailType } from "@/modules/properties/types";
 
 const PropertyDetail = () => {
   const router = useRouter();
   const { id } = router.query;
+  const cameFromRecommendations = isRecommendationReturnSource(router.query.from);
+  const returnTo = getSafeReturnTo(router.query.returnTo);
+  const listingRoute = cameFromRecommendations
+    ? APP_ROUTES.recommendations
+    : APP_ROUTES.properties;
+  const listingLabel = cameFromRecommendations
+    ? "Recommendations"
+    : "Properties";
+  const backButtonLabel = cameFromRecommendations
+    ? "Back to Recommendations"
+    : "Back to Properties";
   const [property, setProperty] = useState<PropertyDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const imageRef = useRef<HTMLDivElement | null>(null);
+
+  const handleNavigateBack = () => {
+    if (returnTo) {
+      void router.push(returnTo);
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    void router.push(listingRoute);
+  };
 
   const handleFullscreenToggle = () => {
     if (!document.fullscreenElement) {
@@ -89,7 +118,7 @@ const PropertyDetail = () => {
           </p>
 
           <button
-            onClick={() => router.push(APP_ROUTES.properties)}
+            onClick={handleNavigateBack}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-colors font-semibold shadow-md mx-auto"
           >
             <svg
@@ -106,7 +135,7 @@ const PropertyDetail = () => {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to Properties
+            {backButtonLabel}
           </button>
         </div>
       </div>
@@ -125,10 +154,10 @@ const PropertyDetail = () => {
           </button>
           <span>/</span>
           <button
-            onClick={() => router.push(APP_ROUTES.properties)}
+            onClick={handleNavigateBack}
             className="hover:text-blue-600 transition-colors"
           >
-            Properties
+            {listingLabel}
           </button>
           <span>/</span>
           <span className="text-gray-900 font-medium">{property.title}</span>
@@ -446,7 +475,7 @@ const PropertyDetail = () => {
         {/* Back Button */}
         <div className="mt-12 flex justify-center">
           <button
-            onClick={() => router.push(APP_ROUTES.properties)}
+            onClick={handleNavigateBack}
             className="inline-flex items-center px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium shadow-sm cursor-pointer"
           >
             <svg
@@ -462,7 +491,7 @@ const PropertyDetail = () => {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to Properties
+            {backButtonLabel}
           </button>
         </div>
       </div>

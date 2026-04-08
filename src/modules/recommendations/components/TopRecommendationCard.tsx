@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { CheckCircle2, CircleAlert } from "lucide-react";
-import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { formatPropertyReference } from "@/modules/properties/reference";
+import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
+import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
 
 const formatCurrency = (value?: string | number | null) => {
   if (value === undefined || value === null || value === "")
@@ -56,6 +58,8 @@ interface TopRecommendationCardProps {
 }
 
 const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
+  const router = useRouter();
+  const setScrollY = useRecommendationStore((state) => state.setScrollY);
   const image = item.property.primaryImage || item.property.images?.[0];
   const topReasons = item.topReasons.slice(0, 3);
   const isPrimePick = rank === 1;
@@ -63,6 +67,14 @@ const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
   const reasonsHeading = isPrimePick
     ? "Why This Ranked First"
     : `Why This Ranked #${rank}`;
+  const detailHref = buildRecommendationDetailHref(
+    item.property.id,
+    router.asPath,
+  );
+
+  const handleOpenProperty = () => {
+    setScrollY(window.scrollY);
+  };
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-[#d8def3] bg-white shadow-[0_24px_70px_rgba(19,27,46,0.08)]">
@@ -144,7 +156,8 @@ const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
           </div>
 
           <Link
-            href={APP_ROUTES.propertyDetail(item.property.id)}
+            href={detailHref}
+            onClick={handleOpenProperty}
             className="mt-10 inline-flex w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#004ac6_0%,#4b41e1_100%)] px-6 py-4 text-center font-auth-body text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-lg shadow-[#004ac6]/20 transition hover:opacity-95"
           >
             View Full Property Details

@@ -1,4 +1,4 @@
-import { BadgeCheck, BarChart3 } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import type {
   RecommendationItem,
   RecommendationPagination,
@@ -88,7 +88,7 @@ const RecommendationResults = ({
         </h3>
         <p className="mx-auto mt-4 max-w-xl font-auth-body text-lg leading-8 text-[#5b6275]">
           {hasActiveFilters
-            ? "We couldn't find properties that fit this brief. Try widening your location, budget, or area target to surface more matches."
+            ? `We couldn't find properties that fit this brief. Try widening your location, budget, or area target to surface better matches. Try widening your location, budget, or area target to surface better matches.`
             : "Enter a property brief, choose a location, or set at least one preference to generate ranked recommendations."}
         </p>
       </section>

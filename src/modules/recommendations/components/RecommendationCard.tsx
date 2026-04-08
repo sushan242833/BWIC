@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { APP_ROUTES } from "@/config/routes";
+import { useRouter } from "next/router";
 import { assetUrl } from "@/lib/api/client";
+import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
+import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 
 const formatCurrency = (value?: string | number | null) => {
@@ -34,7 +36,17 @@ interface RecommendationCardProps {
 }
 
 const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
+  const router = useRouter();
+  const setScrollY = useRecommendationStore((state) => state.setScrollY);
   const image = item.property.primaryImage || item.property.images?.[0];
+  const detailHref = buildRecommendationDetailHref(
+    item.property.id,
+    router.asPath,
+  );
+
+  const handleOpenProperty = () => {
+    setScrollY(window.scrollY);
+  };
 
   return (
     <article className="overflow-hidden rounded-[24px] border border-[#dde3f5] bg-white shadow-[0_22px_60px_rgba(19,27,46,0.06)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(19,27,46,0.1)]">
@@ -92,7 +104,8 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
         </div>
 
         <Link
-          href={APP_ROUTES.propertyDetail(item.property.id)}
+          href={detailHref}
+          onClick={handleOpenProperty}
           className="inline-flex w-full items-center justify-center rounded-xl border border-[#004ac6] px-5 py-3 text-center font-auth-body text-xs font-semibold uppercase tracking-[0.18em] text-[#004ac6] transition hover:bg-[#eef2ff]"
         >
           Details

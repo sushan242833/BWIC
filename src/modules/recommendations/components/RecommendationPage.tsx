@@ -12,7 +12,6 @@ import {
 } from "@/modules/recommendations/api";
 import RecommendationResults from "@/modules/recommendations/components/RecommendationResults";
 import {
-  DEFAULT_RECOMMENDATION_FORM_VALUES,
   DEFAULT_RECOMMENDATION_PAGINATION,
   EMPTY_RECOMMENDATION_TOTAL_PAGES,
   RECOMMENDATION_FORM_TEXT,
@@ -20,33 +19,21 @@ import {
 } from "@/modules/recommendations/constants";
 import type {
   RecommendationDetectedEntity,
-  RecommendationItem,
   RecommendationLocationSuggestion,
-  RecommendationPagination,
   RecommendationParsedBriefMetadata,
-  RecommendationPlaceDetails,
   RecommendationPreferences,
 } from "@/modules/recommendations/types";
-import { defaultRecommendationPreferences } from "@/modules/recommendations/types";
+import {
+  buildRecommendationRequestKey,
+  shouldRestoreRecommendationSession,
+  useRecommendationStore,
+} from "@/modules/recommendations/store/useRecommendationStore";
 
 const formFieldClassName =
   "w-full rounded-xl border border-[#e1e7fb] bg-[#f4f6ff] px-4 py-4 font-auth-body text-base text-[#131b2e] outline-none transition placeholder:text-[#7d8296] focus:border-[#7fa3ff] focus:bg-white focus:ring-4 focus:ring-[#dbe6ff]";
 
 const labelClassName =
   "font-auth-body text-sm font-semibold uppercase tracking-[0.14em] text-[#434655]";
-
-const formatNumber = (value: string, maximumFractionDigits = 1) => {
-  const numeric = Number.parseFloat(value.replace(/,/g, ""));
-  if (Number.isNaN(numeric)) {
-    return value;
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits,
-    minimumFractionDigits:
-      numeric % 1 === 0 ? 0 : Math.min(1, maximumFractionDigits),
-  }).format(numeric);
-};
 
 const formatMetricValue = (value: number, suffix = "") => {
   const formatted = new Intl.NumberFormat("en-US", {
@@ -205,20 +192,44 @@ const buildAppliedSummary = (
 const RecommendationPage = () => {
   const resultsRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
+  const hasRestoredScrollRef = useRef(false);
+  const hasRequestedHydrationRef = useRef(false);
 
-  const [preferences, setPreferences] = useState<RecommendationPreferences>(
-    DEFAULT_RECOMMENDATION_FORM_VALUES,
+  const formValues = useRecommendationStore((state) => state.formValues);
+  const appliedValues = useRecommendationStore((state) => state.appliedValues);
+  const selectedPlaceId = useRecommendationStore((state) => state.selectedPlaceId);
+  const selectedPlaceDetails = useRecommendationStore(
+    (state) => state.selectedPlaceDetails,
   );
-  const [appliedPreferences, setAppliedPreferences] =
-    useState<RecommendationPreferences>(defaultRecommendationPreferences);
-  const [appliedBrief, setAppliedBrief] = useState("");
-  const [recommendationMeta, setRecommendationMeta] =
-    useState<RecommendationParsedBriefMetadata | null>(null);
-  const [recommendations, setRecommendations] = useState<RecommendationItem[]>(
-    [],
+  const appliedPlaceDetails = useRecommendationStore(
+    (state) => state.appliedPlaceDetails,
   );
-  const [pagination, setPagination] = useState<RecommendationPagination>(
-    DEFAULT_RECOMMENDATION_PAGINATION,
+  const recommendations = useRecommendationStore(
+    (state) => state.recommendations,
+  );
+  const pagination = useRecommendationStore((state) => state.pagination);
+  const recommendationMeta = useRecommendationStore((state) => state.summary);
+  const hasGenerated = useRecommendationStore((state) => state.hasGenerated);
+  const lastCompletedRequestKey = useRecommendationStore(
+    (state) => state.lastCompletedRequestKey,
+  );
+  const scrollY = useRecommendationStore((state) => state.scrollY);
+  const hasHydrated = useRecommendationStore((state) => state.hasHydrated);
+  const setFormValue = useRecommendationStore((state) => state.setFormValue);
+  const setSelectedPlace = useRecommendationStore(
+    (state) => state.setSelectedPlace,
+  );
+  const clearSelectedPlace = useRecommendationStore(
+    (state) => state.clearSelectedPlace,
+  );
+  const applyRecommendationPayload = useRecommendationStore(
+    (state) => state.applyRecommendationPayload,
+  );
+  const setResults = useRecommendationStore((state) => state.setResults);
+  const setPage = useRecommendationStore((state) => state.setPage);
+  const setScrollY = useRecommendationStore((state) => state.setScrollY);
+  const resetRecommendationState = useRecommendationStore(
+    (state) => state.resetRecommendationState,
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -227,23 +238,34 @@ const RecommendationPage = () => {
   >([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
-  const [selectedPlaceId, setSelectedPlaceId] = useState("");
-  const [selectedPlaceDetails, setSelectedPlaceDetails] =
-    useState<RecommendationPlaceDetails | null>(null);
-  const [appliedPlaceDetails, setAppliedPlaceDetails] =
-    useState<RecommendationPlaceDetails | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+  const isRestoringSession = hasMounted && !hasHydrated;
 
   const appliedPayload = useMemo(
-    () => buildRecommendationPreferencesPayload(appliedPreferences),
-    [appliedPreferences],
+    () => buildRecommendationPreferencesPayload(appliedValues),
+    [appliedValues],
   );
 
   const hasAppliedPreferences = useMemo(
     () =>
-      Boolean(appliedBrief.trim()) ||
-      hasStructuredPreferences(appliedPreferences),
-    [appliedBrief, appliedPreferences],
+      hasGenerated &&
+      (Boolean(appliedValues.brief.trim()) ||
+        hasStructuredPreferences(appliedValues)),
+    [appliedValues, hasGenerated],
   );
+
+  const requestKey = useMemo(() => {
+    if (!hasGenerated) {
+      return null;
+    }
+
+    return buildRecommendationRequestKey({
+      appliedValues,
+      appliedPlaceDetails,
+      page: pagination.page,
+      limit: pagination.limit,
+    });
+  }, [appliedPlaceDetails, appliedValues, hasGenerated, pagination.limit, pagination.page]);
 
   const appliedSummary = useMemo(
     () => buildAppliedSummary(recommendationMeta),
@@ -263,16 +285,46 @@ const RecommendationPage = () => {
   );
 
   const requiresLocationSelection =
-    preferences.location.trim().length > 0 && !selectedPlaceId;
+    formValues.location.trim().length > 0 && !selectedPlaceId;
 
   useEffect(() => {
-    if (!hasAppliedPreferences) {
-      setRecommendations([]);
-      setRecommendationMeta(null);
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted || hasHydrated || hasRequestedHydrationRef.current) {
+      return;
+    }
+
+    hasRequestedHydrationRef.current = true;
+
+    if (!shouldRestoreRecommendationSession()) {
+      void useRecommendationStore.persist.clearStorage();
+      resetRecommendationState();
+      return;
+    }
+
+    void useRecommendationStore.persist.rehydrate();
+  }, [hasHydrated, hasMounted, resetRecommendationState]);
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
+    if (!hasGenerated || !hasAppliedPreferences || !requestKey) {
       setError("");
       setLoading(false);
       return;
     }
+
+    if (requestKey === lastCompletedRequestKey) {
+      setError("");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
 
     const fetchRecommendations = async () => {
       try {
@@ -280,7 +332,7 @@ const RecommendationPage = () => {
         setError("");
 
         const response = await getRecommendations({
-          brief: appliedBrief,
+          brief: appliedValues.brief.trim(),
           preferences: {
             ...appliedPayload,
             ...(appliedPlaceDetails?.location
@@ -294,45 +346,92 @@ const RecommendationPage = () => {
           limit: pagination.limit,
         });
 
-        setRecommendations(Array.isArray(response.data) ? response.data : []);
-        setRecommendationMeta(response.meta?.parsedBrief ?? null);
-        setPagination((prev) =>
-          response.pagination
-            ? response.pagination
-            : {
-                ...prev,
-                total: 0,
-                totalPages: EMPTY_RECOMMENDATION_TOTAL_PAGES,
-                hasNext: false,
-                hasPrev: false,
-              },
-        );
+        if (cancelled) {
+          return;
+        }
+
+        setResults({
+          recommendations: Array.isArray(response.data) ? response.data : [],
+          pagination:
+            response.pagination ??
+            {
+              ...DEFAULT_RECOMMENDATION_PAGINATION,
+              page: pagination.page,
+              limit: pagination.limit,
+              total: 0,
+              totalPages: EMPTY_RECOMMENDATION_TOTAL_PAGES,
+              hasNext: false,
+              hasPrev: false,
+            },
+          summary: response.meta?.parsedBrief ?? null,
+          requestKey,
+        });
       } catch (fetchError) {
+        if (cancelled) {
+          return;
+        }
+
         console.error("Failed to fetch recommendations:", fetchError);
-        setRecommendations([]);
-        setRecommendationMeta(null);
         setError(
           fetchError instanceof Error
             ? fetchError.message
             : RECOMMENDATION_FORM_TEXT.loadError,
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void fetchRecommendations();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
-    appliedBrief,
     appliedPayload,
     appliedPlaceDetails,
+    appliedValues.brief,
     hasAppliedPreferences,
-    pagination.page,
-    pagination.limit,
+    hasGenerated,
+    hasHydrated,
+    lastCompletedRequestKey,
+    requestKey,
+    setResults,
   ]);
 
   useEffect(() => {
-    if (!shouldFetchLocationSuggestions(preferences.location)) {
+    if (!hasHydrated || loading || hasRestoredScrollRef.current) {
+      return;
+    }
+
+    if (!hasGenerated || scrollY <= 0 || recommendations.length === 0) {
+      hasRestoredScrollRef.current = true;
+      return;
+    }
+
+    let frameId = 0;
+    let nestedFrameId = 0;
+
+    frameId = window.requestAnimationFrame(() => {
+      nestedFrameId = window.requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollY,
+          behavior: "auto",
+        });
+        hasRestoredScrollRef.current = true;
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.cancelAnimationFrame(nestedFrameId);
+    };
+  }, [hasGenerated, hasHydrated, loading, recommendations.length, scrollY]);
+
+  useEffect(() => {
+    if (!shouldFetchLocationSuggestions(formValues.location)) {
       setLocationSuggestions([]);
       return;
     }
@@ -340,7 +439,7 @@ const RecommendationPage = () => {
     const timeout = setTimeout(async () => {
       try {
         setLocationLoading(true);
-        const suggestions = await getLocationSuggestions(preferences.location);
+        const suggestions = await getLocationSuggestions(formValues.location);
         setLocationSuggestions(Array.isArray(suggestions) ? suggestions : []);
       } catch (fetchError) {
         console.error(
@@ -354,7 +453,7 @@ const RecommendationPage = () => {
     }, LOCATION_AUTOCOMPLETE_DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
-  }, [preferences.location]);
+  }, [formValues.location]);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -372,11 +471,13 @@ const RecommendationPage = () => {
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = event.target;
-    setPreferences((prev) => ({ ...prev, [name]: value }));
+    setFormValue(
+      name as keyof RecommendationPreferences,
+      value as RecommendationPreferences[keyof RecommendationPreferences],
+    );
 
     if (name === "location") {
-      setSelectedPlaceId("");
-      setSelectedPlaceDetails(null);
+      clearSelectedPlace();
       setIsLocationDropdownOpen(true);
     }
   };
@@ -399,17 +500,17 @@ const RecommendationPage = () => {
   const handleLocationSelect = async (
     suggestion: RecommendationLocationSuggestion,
   ) => {
-    setPreferences((prev) => ({ ...prev, location: suggestion.description }));
-    setSelectedPlaceId(suggestion.placeId);
+    setFormValue("location", suggestion.description);
+    setSelectedPlace(suggestion.placeId, null);
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
 
     try {
       const placeDetails = await getLocationPlaceDetails(suggestion.placeId);
-      setSelectedPlaceDetails(placeDetails ?? null);
+      setSelectedPlace(suggestion.placeId, placeDetails ?? null);
     } catch (fetchError) {
       console.error("Failed to fetch location details:", fetchError);
-      setSelectedPlaceDetails(null);
+      setSelectedPlace(suggestion.placeId, null);
     }
   };
 
@@ -418,32 +519,26 @@ const RecommendationPage = () => {
       return;
     }
 
-    setAppliedPreferences({
-      ...preferences,
-      location: selectedPlaceDetails?.primaryText ?? preferences.location,
+    setScrollY(0);
+    applyRecommendationPayload({
+      appliedValues: {
+        ...formValues,
+        brief: formValues.brief.trim(),
+        location: selectedPlaceDetails?.primaryText ?? formValues.location,
+      },
+      appliedPlaceDetails: selectedPlaceDetails,
     });
-    setAppliedBrief(preferences.brief.trim());
-    setAppliedPlaceDetails(selectedPlaceDetails);
-    setPagination((prev) => ({ ...prev, page: 1 }));
+    setError("");
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const clearBrief = () => {
-    setPreferences(DEFAULT_RECOMMENDATION_FORM_VALUES);
-    setAppliedPreferences(defaultRecommendationPreferences);
-    setAppliedBrief("");
-    setRecommendations([]);
-    setRecommendationMeta(null);
-    setSelectedPlaceId("");
-    setSelectedPlaceDetails(null);
-    setAppliedPlaceDetails(null);
+    resetRecommendationState();
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
+    setScrollY(0);
     setError("");
-    setPagination((prev) => ({
-      ...DEFAULT_RECOMMENDATION_PAGINATION,
-      limit: prev.limit,
-    }));
+    setLoading(false);
   };
 
   const handlePageChange = (page: number) => {
@@ -451,7 +546,8 @@ const RecommendationPage = () => {
       return;
     }
 
-    setPagination((prev) => ({ ...prev, page }));
+    setPage(page);
+    setScrollY(0);
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -495,7 +591,7 @@ const RecommendationPage = () => {
             <label className={labelClassName}>Free-Text Property Brief</label>
             <textarea
               name="brief"
-              value={preferences.brief}
+              value={formValues.brief}
               onChange={handlePreferenceChange}
               onKeyDown={handleBriefKeyDown}
               placeholder={RECOMMENDATION_FORM_TEXT.briefPlaceholder}
@@ -513,7 +609,7 @@ const RecommendationPage = () => {
             <div className="relative" ref={locationRef}>
               <input
                 name="location"
-                value={preferences.location}
+                value={formValues.location}
                 onChange={handlePreferenceChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
                 placeholder={RECOMMENDATION_FORM_TEXT.locationPlaceholder}
@@ -521,7 +617,7 @@ const RecommendationPage = () => {
               />
 
               {isLocationDropdownOpen &&
-                shouldFetchLocationSuggestions(preferences.location) && (
+                shouldFetchLocationSuggestions(formValues.location) && (
                   <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-[#dfe5f8] bg-white shadow-xl">
                     {locationLoading && (
                       <div className="px-4 py-3 font-auth-body text-sm text-[#5b6275]">
@@ -560,7 +656,7 @@ const RecommendationPage = () => {
             <input
               type="number"
               name="price"
-              value={preferences.price}
+              value={formValues.price}
               onChange={handlePreferenceChange}
               placeholder={RECOMMENDATION_FORM_TEXT.pricePlaceholder}
               className={formFieldClassName}
@@ -571,7 +667,7 @@ const RecommendationPage = () => {
             <div className="flex items-center justify-between gap-3">
               <label className={labelClassName}>Target ROI (%)</label>
               <span className="font-auth-headline text-2xl font-semibold text-[#004ac6]">
-                {formatOptionalRangeValue(preferences.roi, "%")}
+                {formatOptionalRangeValue(formValues.roi, "%")}
               </span>
             </div>
             <input
@@ -581,14 +677,14 @@ const RecommendationPage = () => {
               max={RECOMMENDATION_RANGE_LIMITS.roi.max}
               step={RECOMMENDATION_RANGE_LIMITS.roi.step}
               value={getRangeInputValue(
-                preferences.roi,
+                formValues.roi,
                 RECOMMENDATION_RANGE_LIMITS.roi.min,
               )}
               onChange={handlePreferenceChange}
               className="properties-range w-full"
               style={buildRangeBackground(
                 getRangeInputValue(
-                  preferences.roi,
+                  formValues.roi,
                   RECOMMENDATION_RANGE_LIMITS.roi.min,
                 ),
                 RECOMMENDATION_RANGE_LIMITS.roi.min,
@@ -602,7 +698,7 @@ const RecommendationPage = () => {
             <input
               type="text"
               name="area"
-              value={preferences.area}
+              value={formValues.area}
               onChange={handlePreferenceChange}
               placeholder={RECOMMENDATION_FORM_TEXT.areaPlaceholder}
               className={formFieldClassName}
@@ -616,7 +712,7 @@ const RecommendationPage = () => {
               </label>
               <span className="font-auth-headline text-2xl font-semibold text-[#004ac6]">
                 {formatOptionalRangeValue(
-                  preferences.maxDistanceFromHighway,
+                  formValues.maxDistanceFromHighway,
                   " km",
                 )}
               </span>
@@ -628,14 +724,14 @@ const RecommendationPage = () => {
               max={RECOMMENDATION_RANGE_LIMITS.distance.max}
               step={RECOMMENDATION_RANGE_LIMITS.distance.step}
               value={getRangeInputValue(
-                preferences.maxDistanceFromHighway,
+                formValues.maxDistanceFromHighway,
                 RECOMMENDATION_RANGE_LIMITS.distance.min,
               )}
               onChange={handlePreferenceChange}
               className="properties-range w-full"
               style={buildRangeBackground(
                 getRangeInputValue(
-                  preferences.maxDistanceFromHighway,
+                  formValues.maxDistanceFromHighway,
                   RECOMMENDATION_RANGE_LIMITS.distance.min,
                 ),
                 RECOMMENDATION_RANGE_LIMITS.distance.min,
@@ -752,7 +848,7 @@ const RecommendationPage = () => {
         <RecommendationResults
           recommendations={recommendations}
           pagination={pagination}
-          loading={loading}
+          loading={isRestoringSession || loading}
           error={error}
           hasActiveFilters={hasAppliedPreferences}
           onPageChange={handlePageChange}

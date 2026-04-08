@@ -5,6 +5,7 @@ import type {
 
 export const DEFAULT_RECOMMENDATION_PAGE_SIZE = 5;
 export const EMPTY_RECOMMENDATION_TOTAL_PAGES = 1;
+export const MINIMUM_RECOMMENDATION_MATCH_PERCENTAGE = 30;
 
 export const DEFAULT_RECOMMENDATION_PAGINATION: RecommendationPagination = {
   page: 1,
