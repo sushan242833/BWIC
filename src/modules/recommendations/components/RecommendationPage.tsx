@@ -87,10 +87,10 @@ const buildRangeBackground = (value: string, min: number, max: number) => {
 const hasStructuredPreferences = (value: RecommendationPreferences) =>
   Boolean(
     value.location.trim() ||
-      value.price.trim() ||
-      value.area.trim() ||
-      Number.parseFloat(value.roi) > 0 ||
-      Number.parseFloat(value.maxDistanceFromHighway) > 0,
+    value.price.trim() ||
+    value.area.trim() ||
+    Number.parseFloat(value.roi) > 0 ||
+    Number.parseFloat(value.maxDistanceFromHighway) > 0,
   );
 
 const formatDetectedEntity = (entity: RecommendationDetectedEntity): string => {
@@ -141,18 +141,32 @@ const buildAppliedSummary = (
   }
 
   if (appliedFilters.maxPrice !== undefined) {
-    summary.push(`Budget up to ${formatCurrencyValue(appliedFilters.maxPrice)}`);
+    summary.push(
+      `Budget up to ${formatCurrencyValue(appliedFilters.maxPrice)}`,
+    );
   }
 
   if (appliedFilters.minRoi !== undefined) {
-    summary.push(`ROI at least ${formatMetricValue(appliedFilters.minRoi, "%")}`);
-  } else if (appliedPreferences.roi !== undefined && appliedPreferences.roi > 0) {
-    summary.push(`Preferred ROI ${formatMetricValue(appliedPreferences.roi, "%")}`);
+    summary.push(
+      `ROI at least ${formatMetricValue(appliedFilters.minRoi, "%")}`,
+    );
+  } else if (
+    appliedPreferences.roi !== undefined &&
+    appliedPreferences.roi > 0
+  ) {
+    summary.push(
+      `Preferred ROI ${formatMetricValue(appliedPreferences.roi, "%")}`,
+    );
   }
 
   if (appliedFilters.minArea !== undefined) {
-    summary.push(`Area at least ${formatMetricValue(appliedFilters.minArea)} sq ft`);
-  } else if (appliedPreferences.area !== undefined && appliedPreferences.area > 0) {
+    summary.push(
+      `Area at least ${formatMetricValue(appliedFilters.minArea)} sq ft`,
+    );
+  } else if (
+    appliedPreferences.area !== undefined &&
+    appliedPreferences.area > 0
+  ) {
     summary.push(
       `Preferred area ${formatMetricValue(appliedPreferences.area)} sq ft`,
     );
@@ -180,7 +194,9 @@ const buildAppliedSummary = (
     appliedPreferences.price > 0 &&
     appliedFilters.maxPrice === undefined
   ) {
-    summary.push(`Preferred price ${formatCurrencyValue(appliedPreferences.price)}`);
+    summary.push(
+      `Preferred price ${formatCurrencyValue(appliedPreferences.price)}`,
+    );
   }
 
   return summary;
@@ -224,7 +240,8 @@ const RecommendationPage = () => {
 
   const hasAppliedPreferences = useMemo(
     () =>
-      Boolean(appliedBrief.trim()) || hasStructuredPreferences(appliedPreferences),
+      Boolean(appliedBrief.trim()) ||
+      hasStructuredPreferences(appliedPreferences),
     [appliedBrief, appliedPreferences],
   );
 
@@ -237,10 +254,10 @@ const RecommendationPage = () => {
     () =>
       Boolean(
         recommendationMeta &&
-          (recommendationMeta.brief ||
-            recommendationMeta.detectedEntities.length > 0 ||
-            recommendationMeta.warnings.length > 0 ||
-            appliedSummary.length > 0),
+        (recommendationMeta.brief ||
+          recommendationMeta.detectedEntities.length > 0 ||
+          recommendationMeta.warnings.length > 0 ||
+          appliedSummary.length > 0),
       ),
     [appliedSummary, recommendationMeta],
   );
@@ -486,8 +503,8 @@ const RecommendationPage = () => {
             />
             <p className="font-auth-body text-sm text-[#5b6275]">
               Press Enter to generate recommendations, or use Shift+Enter for a
-              new line. Structured inputs override parsed brief values when
-              they overlap.
+              new line. Structured inputs override parsed brief values when they
+              overlap.
             </p>
           </div>
 
