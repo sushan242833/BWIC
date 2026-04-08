@@ -1,23 +1,10 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { assetUrl } from "@/lib/api/client";
+import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
 import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
 import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
 import type { RecommendationItem } from "@/modules/recommendations/types";
-
-const formatCurrency = (value?: string | number | null) => {
-  if (value === undefined || value === null || value === "")
-    return "Price on request";
-
-  const normalized =
-    typeof value === "number" ? value : value.replace(/,/g, "");
-  const numeric = Number.parseFloat(String(normalized));
-  if (Number.isNaN(numeric)) return `NPR ${value}`;
-
-  return `NPR ${new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(numeric)}`;
-};
 
 const formatPercent = (value?: string) => {
   if (!value) return "ROI unavailable";
@@ -89,7 +76,7 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
               Price
             </div>
             <div className="mt-1 font-auth-headline text-[1.7rem] font-semibold text-[#131b2e]">
-              {formatCurrency(item.property.price)}
+              {formatRecommendationCurrency(item.property.price)}
             </div>
           </div>
 

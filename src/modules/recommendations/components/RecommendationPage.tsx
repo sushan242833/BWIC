@@ -17,6 +17,7 @@ import {
   RECOMMENDATION_FORM_TEXT,
   RECOMMENDATION_RANGE_LIMITS,
 } from "@/modules/recommendations/constants";
+import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
 import type {
   RecommendationDetectedEntity,
   RecommendationLocationSuggestion,
@@ -56,9 +57,7 @@ const formatOptionalRangeValue = (value: string, suffix = "") => {
 };
 
 const formatCurrencyValue = (value: number) =>
-  `NPR ${new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-  }).format(value)}`;
+  formatRecommendationCurrency(value);
 
 const buildRangeBackground = (value: string, min: number, max: number) => {
   const numeric = Number.parseFloat(value);

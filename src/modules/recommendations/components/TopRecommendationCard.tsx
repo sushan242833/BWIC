@@ -4,23 +4,10 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import { assetUrl } from "@/lib/api/client";
 import { formatPropertyReference } from "@/modules/properties/reference";
 import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
+import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
 import type { RecommendationItem } from "@/modules/recommendations/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
 import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
-
-const formatCurrency = (value?: string | number | null) => {
-  if (value === undefined || value === null || value === "")
-    return "Price on request";
-
-  const normalized =
-    typeof value === "number" ? value : value.replace(/,/g, "");
-  const numeric = Number.parseFloat(String(normalized));
-  if (Number.isNaN(numeric)) return `NPR ${value}`;
-
-  return `NPR ${new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(numeric)}`;
-};
 
 const formatArea = (value?: string | number | null) => {
   if (value === undefined || value === null || value === "")
@@ -122,7 +109,7 @@ const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
                   Price
                 </div>
                 <div className="mt-2 font-auth-headline text-[2rem] font-semibold text-[#131b2e]">
-                  {formatCurrency(item.property.price)}
+                  {formatRecommendationCurrency(item.property.price)}
                 </div>
               </div>
 
