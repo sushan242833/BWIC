@@ -61,7 +61,7 @@ export interface RecommendationDetectedEntity {
   raw: string;
 }
 
-export type RecommendationExtractionSource = "ai" | "rule_based_fallback";
+export type RecommendationExtractionSource = "ai";
 
 export interface RecommendationParsedBriefMetadata {
   brief?: string;
