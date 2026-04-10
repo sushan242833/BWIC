@@ -12,6 +12,8 @@ export interface PropertySummary {
   categoryId: number;
   category: CategoryOption | null;
   location: string;
+  latitude?: number;
+  longitude?: number;
   price: string;
   roi: string;
   status: string;
@@ -25,10 +27,7 @@ export interface PropertySummary {
   updatedAt?: string;
 }
 
-export interface PropertyDetail extends PropertySummary {
-  latitude?: number;
-  longitude?: number;
-}
+export interface PropertyDetail extends PropertySummary {}
 
 export type Property = PropertySummary;
 
