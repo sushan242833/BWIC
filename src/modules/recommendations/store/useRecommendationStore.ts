@@ -4,6 +4,7 @@ import {
   DEFAULT_RECOMMENDATION_FORM_VALUES,
   DEFAULT_RECOMMENDATION_PAGINATION,
 } from "@/modules/recommendations/constants";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 import type {
   RecommendationItem,
   RecommendationPagination,
@@ -95,6 +96,7 @@ export interface RecommendationStoreState {
   recommendations: RecommendationItem[];
   pagination: RecommendationPagination;
   summary: RecommendationParsedBriefMetadata | null;
+  appliedWeights: RecommendationWeights | null;
   hasGenerated: boolean;
   lastGeneratedAt: number | null;
   lastCompletedRequestKey: string | null;
@@ -118,6 +120,7 @@ export interface RecommendationStoreState {
     recommendations: RecommendationItem[];
     pagination: RecommendationPagination;
     summary: RecommendationParsedBriefMetadata | null;
+    appliedWeights: RecommendationWeights | null;
     requestKey: string;
   }) => void;
   setPage: (page: number) => void;
@@ -145,6 +148,7 @@ const initialState = {
   recommendations: [] as RecommendationItem[],
   pagination: cloneDefaultPagination(),
   summary: null as RecommendationParsedBriefMetadata | null,
+  appliedWeights: null as RecommendationWeights | null,
   hasGenerated: false,
   lastGeneratedAt: null as number | null,
   lastCompletedRequestKey: null as string | null,
@@ -193,17 +197,25 @@ export const useRecommendationStore = create<RecommendationStoreState>()(
           lastCompletedRequestKey: null,
           recommendations: [],
           summary: null,
+          appliedWeights: null,
           pagination: {
             ...cloneDefaultPagination(),
             limit: state.pagination.limit,
             page: 1,
           },
         })),
-      setResults: ({ recommendations, pagination, summary, requestKey }) =>
+      setResults: ({
+        recommendations,
+        pagination,
+        summary,
+        appliedWeights,
+        requestKey,
+      }) =>
         set({
           recommendations,
           pagination,
           summary,
+          appliedWeights,
           lastCompletedRequestKey: requestKey,
         }),
       setPage: (page) =>
@@ -248,6 +260,7 @@ export const useRecommendationStore = create<RecommendationStoreState>()(
         recommendations: state.recommendations,
         pagination: state.pagination,
         summary: state.summary,
+        appliedWeights: state.appliedWeights,
         hasGenerated: state.hasGenerated,
         lastGeneratedAt: state.lastGeneratedAt,
         lastCompletedRequestKey: state.lastCompletedRequestKey,

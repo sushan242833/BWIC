@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { navItems as defaultNavItems, NavbarItem } from "@/utils/navItems";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRightFromBracket,
   faGauge,
+  faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,8 @@ const Navbar: React.FC<NavbarProps> = ({
   const router = useRouter();
   const { user, isAdmin, isLoading, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const pathname = router.pathname;
   const isActivePath = (path: string) =>
@@ -36,8 +39,22 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleLogout = async () => {
     await logout();
     setIsMenuOpen(false);
+    setIsProfileOpen(false);
     await router.push(APP_ROUTES.home);
   };
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   return (
     <nav className="bg-white text-black shadow-md fixed top-0 left-0 w-full z-50">
@@ -85,31 +102,52 @@ const Navbar: React.FC<NavbarProps> = ({
             )}
 
             {!isLoading && user && (
-              <>
-                <span className="text-sm font-medium text-slate-600">
-                  {user.fullName}
-                </span>
-                {isAdmin && (
-                  <Link
-                    href={APP_ROUTES.adminDashboard}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                    title="Open dashboard"
-                  >
-                    <FontAwesomeIcon icon={faGauge} className="text-sm" />
-                    <span>Dashboard</span>
-                  </Link>
-                )}
+              <div className="relative" ref={profileMenuRef}>
                 <button
                   type="button"
-                  onClick={() => void handleLogout()}
-                  className="flex items-center gap-2 rounded-full px-2 py-2 text-sm font-semibold text-white transition "
+                  onClick={() => setIsProfileOpen((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700"
                 >
-                  <FontAwesomeIcon
-                    icon={faArrowRightFromBracket}
-                    className="text-xl text-black cursor-pointer"
-                  />
+                  <span>{user.fullName}</span>
                 </button>
-              </>
+
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-2 shadow-xl">
+                    <Link
+                      href={APP_ROUTES.settings}
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      <FontAwesomeIcon icon={faGear} className="text-sm" />
+                      <span>Settings</span>
+                    </Link>
+
+                    {isAdmin && (
+                      <Link
+                        href={APP_ROUTES.adminDashboard}
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                        title="Open dashboard"
+                      >
+                        <FontAwesomeIcon icon={faGauge} className="text-sm" />
+                        <span>Dashboard</span>
+                      </Link>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      <FontAwesomeIcon
+                        icon={faArrowRightFromBracket}
+                        className="text-sm"
+                      />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -213,6 +251,16 @@ const Navbar: React.FC<NavbarProps> = ({
                       </Link>
                     </li>
                   )}
+                  <li>
+                    <Link
+                      href={APP_ROUTES.settings}
+                      className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FontAwesomeIcon icon={faGear} className="text-sm" />
+                      <span>Settings</span>
+                    </Link>
+                  </li>
                   <li>
                     <button
                       type="button"

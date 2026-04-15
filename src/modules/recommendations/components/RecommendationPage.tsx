@@ -208,6 +208,7 @@ const RecommendationPage = () => {
   );
   const pagination = useRecommendationStore((state) => state.pagination);
   const recommendationMeta = useRecommendationStore((state) => state.summary);
+  const appliedWeights = useRecommendationStore((state) => state.appliedWeights);
   const hasGenerated = useRecommendationStore((state) => state.hasGenerated);
   const lastCompletedRequestKey = useRecommendationStore(
     (state) => state.lastCompletedRequestKey,
@@ -363,6 +364,7 @@ const RecommendationPage = () => {
               hasPrev: false,
             },
           summary: response.meta?.parsedBrief ?? null,
+          appliedWeights: response.meta?.appliedWeights ?? null,
           requestKey,
         });
       } catch (fetchError) {
@@ -846,6 +848,7 @@ const RecommendationPage = () => {
       <div ref={resultsRef} className="mt-20">
         <RecommendationResults
           recommendations={recommendations}
+          appliedWeights={appliedWeights}
           pagination={pagination}
           loading={isRestoringSession || loading}
           error={error}

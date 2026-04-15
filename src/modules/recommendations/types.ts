@@ -3,6 +3,7 @@ import type {
   LocationSuggestion,
 } from "@/modules/locations/types";
 import type { PropertySummary } from "@/modules/properties/types";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 
 export interface RecommendationPreferences {
   brief: string;
@@ -76,13 +77,20 @@ export interface RecommendationParsedBriefMetadata {
 
 export interface RecommendationResponseMeta {
   parsedBrief: RecommendationParsedBriefMetadata;
+  appliedWeights: RecommendationWeights;
 }
 
 export type RecommendationLocationSuggestion = LocationSuggestion;
 export type RecommendationPlaceDetails = LocationPlaceDetails;
 
 export interface RecommendationExplanation {
-  category: "location" | "price" | "roi" | "area" | "distance";
+  category:
+    | "location"
+    | "price"
+    | "roi"
+    | "area"
+    | "highwayAccess"
+    | "distance";
   sentiment: "positive" | "negative" | "neutral";
   reason: string;
   points: number;
@@ -93,6 +101,7 @@ export interface RecommendationScoreBreakdown {
   price?: number;
   roi?: number;
   area?: number;
+  highwayAccess?: number;
   distance?: number;
 }
 

@@ -3,11 +3,13 @@ import type {
   RecommendationItem,
   RecommendationPagination,
 } from "@/modules/recommendations/types";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 import RecommendationCard from "@/modules/recommendations/components/RecommendationCard";
 import TopRecommendationCard from "@/modules/recommendations/components/TopRecommendationCard";
 
 interface RecommendationResultsProps {
   recommendations: RecommendationItem[];
+  appliedWeights: RecommendationWeights | null;
   pagination: RecommendationPagination;
   loading: boolean;
   error: string;
@@ -32,6 +34,7 @@ const buildPageNumbers = (
 
 const RecommendationResults = ({
   recommendations,
+  appliedWeights,
   pagination,
   loading,
   error,
@@ -99,7 +102,11 @@ const RecommendationResults = ({
     <div className="space-y-8">
       <div className="space-y-10">
         {showPrimePick && topResult && (
-          <TopRecommendationCard item={topResult} rank={topResultRank} />
+          <TopRecommendationCard
+            item={topResult}
+            rank={topResultRank}
+            appliedWeights={appliedWeights ?? undefined}
+          />
         )}
 
         {gridResults.length > 0 && (

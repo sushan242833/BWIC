@@ -12,6 +12,9 @@ export const API_ENDPOINTS = {
     resetPassword: withApiBasePath("/auth/reset-password"),
     logout: withApiBasePath("/auth/logout"),
   },
+  user: {
+    recommendationSettings: withApiBasePath("/user/recommendation-settings"),
+  },
   properties: {
     list: withApiBasePath("/properties"),
     detail: (id: string | number) => withApiBasePath(`/properties/${id}`),

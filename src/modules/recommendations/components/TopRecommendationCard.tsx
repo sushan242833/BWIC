@@ -6,6 +6,7 @@ import { formatPropertyReference } from "@/modules/properties/reference";
 import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
 import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
 import type { RecommendationItem } from "@/modules/recommendations/types";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 import ScoreBreakdown from "@/modules/recommendations/components/ScoreBreakdown";
 import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
 
@@ -42,9 +43,14 @@ const formatScore = (value: number) =>
 interface TopRecommendationCardProps {
   item: RecommendationItem;
   rank: number;
+  appliedWeights?: RecommendationWeights;
 }
 
-const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
+const TopRecommendationCard = ({
+  item,
+  rank,
+  appliedWeights,
+}: TopRecommendationCardProps) => {
   const router = useRouter();
   const setScrollY = useRecommendationStore((state) => state.setScrollY);
   const image = item.property.primaryImage || item.property.images?.[0];
@@ -202,7 +208,11 @@ const TopRecommendationCard = ({ item, rank }: TopRecommendationCardProps) => {
         </div>
 
         <div>
-          <ScoreBreakdown breakdown={item.scoreBreakdown} compact />
+          <ScoreBreakdown
+            breakdown={item.scoreBreakdown}
+            appliedWeights={appliedWeights}
+            compact
+          />
         </div>
       </div>
     </section>

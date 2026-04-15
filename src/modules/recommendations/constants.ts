@@ -38,19 +38,12 @@ export const RECOMMENDATION_RANGE_LIMITS = {
   },
 } as const;
 
-export const RECOMMENDATION_SCORE_WEIGHTS = {
-  location: 35,
-  price: 35,
-  roi: 5,
-  area: 20,
-  distance: 5,
-} as const;
-
 export const RECOMMENDATION_SCORE_LABELS = {
   location: "Location",
   price: "Price",
   roi: "ROI",
   area: "Area",
+  highwayAccess: "Access",
   distance: "Access",
 } as const;
 

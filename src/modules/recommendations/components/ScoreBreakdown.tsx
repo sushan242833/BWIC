@@ -1,17 +1,35 @@
-import {
-  RECOMMENDATION_SCORE_LABELS,
-  RECOMMENDATION_SCORE_WEIGHTS,
-} from "@/modules/recommendations/constants";
+import { RECOMMENDATION_SCORE_LABELS } from "@/modules/recommendations/constants";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 import type { RecommendationScoreBreakdown } from "@/modules/recommendations/types";
 
-const getPercentFromWeight = (key: string, value: number) => {
-  const maxWeight =
-    RECOMMENDATION_SCORE_WEIGHTS[
-      key as keyof typeof RECOMMENDATION_SCORE_WEIGHTS
-    ] || 0;
+const getAppliedWeight = (
+  key: string,
+  appliedWeights?: RecommendationWeights,
+) => {
+  if (!appliedWeights) {
+    return undefined;
+  }
+
+  if (key === "distance") {
+    return appliedWeights.highwayAccess;
+  }
+
+  return appliedWeights[key as keyof RecommendationWeights];
+};
+
+const getPercentFromWeight = (
+  key: string,
+  value: number,
+  appliedWeights?: RecommendationWeights,
+) => {
+  const maxWeight = getAppliedWeight(key, appliedWeights);
+
+  if (maxWeight === undefined) {
+    return Math.min(100, Math.max(0, Math.round(value)));
+  }
 
   if (maxWeight <= 0) {
-    return 0;
+    return value > 0 ? 100 : 0;
   }
 
   return Math.min(100, Math.max(0, Math.round((value / maxWeight) * 100)));
@@ -19,11 +37,13 @@ const getPercentFromWeight = (key: string, value: number) => {
 
 interface ScoreBreakdownProps {
   breakdown?: RecommendationScoreBreakdown;
+  appliedWeights?: RecommendationWeights;
   compact?: boolean;
 }
 
 const ScoreBreakdown = ({
   breakdown,
+  appliedWeights,
   compact = false,
 }: ScoreBreakdownProps) => {
   const entries = Object.entries(breakdown || {}).filter(
@@ -66,7 +86,11 @@ const ScoreBreakdown = ({
 
       <div className="mt-4 space-y-4">
         {entries.map(([key, value]) => {
-          const widthPercent = getPercentFromWeight(key, Number(value));
+          const widthPercent = getPercentFromWeight(
+            key,
+            Number(value),
+            appliedWeights,
+          );
 
           return (
             <div key={key} className="space-y-1.5">
