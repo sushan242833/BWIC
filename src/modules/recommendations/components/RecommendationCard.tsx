@@ -25,10 +25,18 @@ interface RecommendationCardProps {
 const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
   const router = useRouter();
   const setScrollY = useRecommendationStore((state) => state.setScrollY);
+  const appliedValues = useRecommendationStore((state) => state.appliedValues);
+  const appliedPlaceDetails = useRecommendationStore(
+    (state) => state.appliedPlaceDetails,
+  );
   const image = item.property.primaryImage || item.property.images?.[0];
   const detailHref = buildRecommendationDetailHref(
     item.property.id,
     router.asPath,
+    {
+      appliedValues,
+      appliedPlaceDetails,
+    },
   );
 
   const handleOpenProperty = () => {
@@ -95,7 +103,7 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
           onClick={handleOpenProperty}
           className="inline-flex w-full items-center justify-center rounded-xl border border-[#004ac6] px-5 py-3 text-center font-auth-body text-xs font-semibold uppercase tracking-[0.18em] text-[#004ac6] transition hover:bg-[#eef2ff]"
         >
-          Details
+          View Full Property Details
         </Link>
       </div>
     </article>

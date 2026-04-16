@@ -4,6 +4,8 @@ export const APP_ROUTES = {
   properties: "/properties",
   propertyDetail: (id: string | number) => `/properties/${id}`,
   recommendations: "/recommendations",
+  recommendationDetail: (propertyId: string | number) =>
+    `/recommendations/${propertyId}/details`,
   settings: "/settings",
   contact: "/contact",
   login: "/login",

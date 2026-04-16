@@ -78,6 +78,8 @@ export interface RecommendationParsedBriefMetadata {
 export interface RecommendationResponseMeta {
   parsedBrief: RecommendationParsedBriefMetadata;
   appliedWeights: RecommendationWeights;
+  isDefaultWeights?: boolean;
+  weightSource?: "default" | "user";
 }
 
 export type RecommendationLocationSuggestion = LocationSuggestion;
@@ -131,6 +133,23 @@ export interface RecommendationResponse {
   data: RecommendationItem[];
   pagination?: RecommendationPagination;
   meta?: RecommendationResponseMeta;
+}
+
+export interface RecommendationDetailAnalysis
+  extends Omit<RecommendationItem, "property"> {
+  rank: number | null;
+}
+
+export interface RecommendationDetailData {
+  property: PropertySummary;
+  recommendation: RecommendationDetailAnalysis;
+  meta: RecommendationResponseMeta;
+}
+
+export interface RecommendationDetailResponse {
+  success: boolean;
+  message: string;
+  data: RecommendationDetailData;
 }
 
 export const defaultRecommendationPreferences: RecommendationPreferences = {

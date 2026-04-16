@@ -53,6 +53,10 @@ const TopRecommendationCard = ({
 }: TopRecommendationCardProps) => {
   const router = useRouter();
   const setScrollY = useRecommendationStore((state) => state.setScrollY);
+  const appliedValues = useRecommendationStore((state) => state.appliedValues);
+  const appliedPlaceDetails = useRecommendationStore(
+    (state) => state.appliedPlaceDetails,
+  );
   const image = item.property.primaryImage || item.property.images?.[0];
   const topReasons = item.topReasons.slice(0, 3);
   const isPrimePick = rank === 1;
@@ -63,6 +67,10 @@ const TopRecommendationCard = ({
   const detailHref = buildRecommendationDetailHref(
     item.property.id,
     router.asPath,
+    {
+      appliedValues,
+      appliedPlaceDetails,
+    },
   );
 
   const handleOpenProperty = () => {

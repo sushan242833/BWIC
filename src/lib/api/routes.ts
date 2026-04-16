@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
   },
   recommendations: {
     list: withApiBasePath("/recommendations"),
+    detail: (propertyId: string | number) =>
+      withApiBasePath(`/recommendations/${propertyId}/details`),
   },
   locations: {
     autocomplete: withApiBasePath("/locations/autocomplete"),

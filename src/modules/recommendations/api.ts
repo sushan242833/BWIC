@@ -2,6 +2,7 @@ import { API_ENDPOINTS } from "@/lib/api/routes";
 import { getJson } from "@/lib/api/client";
 import type {
   RecommendationMustHavePayload,
+  RecommendationDetailResponse,
   RecommendationPreferences,
   RecommendationPreferencesPayload,
   RecommendationQuery,
@@ -84,3 +85,77 @@ export const getRecommendations = async (
     },
     body: JSON.stringify(omitEmptySections(query)),
   });
+
+const appendParam = (
+  params: URLSearchParams,
+  key: string,
+  value: string | number | undefined,
+) => {
+  if (value === undefined) {
+    return;
+  }
+
+  if (typeof value === "string" && !value.trim()) {
+    return;
+  }
+
+  params.set(key, String(value));
+};
+
+export const buildRecommendationDetailSearchParams = (
+  query: RecommendationQuery,
+): URLSearchParams => {
+  const sanitized = omitEmptySections(query);
+  const params = new URLSearchParams();
+
+  appendParam(params, "brief", sanitized.brief);
+
+  appendParam(params, "mustHaveCategoryId", sanitized.mustHave?.categoryId);
+  appendParam(params, "mustHaveCategory", sanitized.mustHave?.category);
+  appendParam(params, "mustHaveLocation", sanitized.mustHave?.location);
+  appendParam(params, "maxPrice", sanitized.mustHave?.maxPrice);
+  appendParam(params, "minRoi", sanitized.mustHave?.minRoi);
+  appendParam(params, "minArea", sanitized.mustHave?.minArea);
+  appendParam(
+    params,
+    "mustHaveMaxDistanceFromHighway",
+    sanitized.mustHave?.maxDistanceFromHighway,
+  );
+  appendParam(params, "mustHaveStatus", sanitized.mustHave?.status);
+
+  appendParam(params, "categoryId", sanitized.preferences?.categoryId);
+  appendParam(params, "category", sanitized.preferences?.category);
+  appendParam(params, "location", sanitized.preferences?.location);
+  appendParam(params, "latitude", sanitized.preferences?.latitude);
+  appendParam(params, "longitude", sanitized.preferences?.longitude);
+  appendParam(
+    params,
+    "locationRadiusKm",
+    sanitized.preferences?.locationRadiusKm,
+  );
+  appendParam(params, "price", sanitized.preferences?.price);
+  appendParam(params, "roi", sanitized.preferences?.roi);
+  appendParam(params, "area", sanitized.preferences?.area);
+  appendParam(
+    params,
+    "maxDistanceFromHighway",
+    sanitized.preferences?.maxDistanceFromHighway,
+  );
+  appendParam(params, "status", sanitized.preferences?.status);
+
+  return params;
+};
+
+export const getRecommendationDetail = async (
+  propertyId: string | number,
+  query: RecommendationQuery,
+): Promise<RecommendationDetailResponse> => {
+  const params = buildRecommendationDetailSearchParams(query);
+  const queryString = params.toString();
+
+  return getJson(
+    `${API_ENDPOINTS.recommendations.detail(propertyId)}${
+      queryString ? `?${queryString}` : ""
+    }`,
+  );
+};
