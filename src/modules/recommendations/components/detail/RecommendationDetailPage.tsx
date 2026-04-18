@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { APP_ROUTES } from "@/config/routes";
 import { getRecommendationDetail } from "@/modules/recommendations/api";
 import {
   buildRecommendationQueryFromRouteQuery,
   getSafeReturnTo,
 } from "@/modules/recommendations/navigation";
+import {
+  shouldRestoreRecommendationSession,
+  useRecommendationStore,
+} from "@/modules/recommendations/store/useRecommendationStore";
 import type { RecommendationDetailData } from "@/modules/recommendations/types";
 import RecommendationAppliedWeights from "@/modules/recommendations/components/detail/RecommendationAppliedWeights";
-import RecommendationDetailCta from "@/modules/recommendations/components/detail/RecommendationDetailCta";
-import RecommendationFiltersUsed from "@/modules/recommendations/components/detail/RecommendationFiltersUsed";
 import RecommendationHero from "@/modules/recommendations/components/detail/RecommendationHero";
 import RecommendationPropertyDetails from "@/modules/recommendations/components/detail/RecommendationPropertyDetails";
-import RecommendationScoreBreakdown from "@/modules/recommendations/components/detail/RecommendationScoreBreakdown";
 import RecommendationSummaryCard from "@/modules/recommendations/components/detail/RecommendationSummaryCard";
 import RecommendationTradeOffs from "@/modules/recommendations/components/detail/RecommendationTradeOffs";
 import RecommendationWhyMatched from "@/modules/recommendations/components/detail/RecommendationWhyMatched";
@@ -40,7 +41,7 @@ const LoadingState = () => (
         Loading recommendation details
       </p>
       <p className="mt-2 font-auth-body text-sm text-[#5b6275]">
-        Rebuilding the property analysis with the active recommendation context.
+        Preparing the property analysis with the active recommendation context.
       </p>
     </div>
   </div>
@@ -77,6 +78,17 @@ const RecommendationDetailPage = () => {
   const [detail, setDetail] = useState<RecommendationDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const hasRequestedHydrationRef = useRef(false);
+  const recommendations = useRecommendationStore(
+    (state) => state.recommendations,
+  );
+  const pagination = useRecommendationStore((state) => state.pagination);
+  const recommendationMeta = useRecommendationStore((state) => state.summary);
+  const appliedWeights = useRecommendationStore((state) => state.appliedWeights);
+  const hasHydrated = useRecommendationStore((state) => state.hasHydrated);
+  const setHasHydrated = useRecommendationStore(
+    (state) => state.setHasHydrated,
+  );
 
   const propertyId = getRoutePropertyId(router.query.propertyId);
   const returnTo = getSafeReturnTo(router.query.returnTo);
@@ -87,6 +99,42 @@ const RecommendationDetailPage = () => {
       ),
     [router.asPath],
   );
+  const cachedDetail = useMemo<RecommendationDetailData | null>(() => {
+    if (!propertyId || !recommendationMeta || !appliedWeights) {
+      return null;
+    }
+
+    const recommendationIndex = recommendations.findIndex(
+      (item) => String(item.property.id) === propertyId,
+    );
+    const cachedRecommendation =
+      recommendationIndex >= 0 ? recommendations[recommendationIndex] : null;
+
+    if (!cachedRecommendation) {
+      return null;
+    }
+
+    const { property, ...recommendation } = cachedRecommendation;
+
+    return {
+      property,
+      recommendation: {
+        ...recommendation,
+        rank: (pagination.page - 1) * pagination.limit + recommendationIndex + 1,
+      },
+      meta: {
+        parsedBrief: recommendationMeta,
+        appliedWeights,
+      },
+    };
+  }, [
+    appliedWeights,
+    pagination.limit,
+    pagination.page,
+    propertyId,
+    recommendationMeta,
+    recommendations,
+  ]);
 
   const handleBack = () => {
     if (returnTo) {
@@ -103,7 +151,29 @@ const RecommendationDetailPage = () => {
   };
 
   useEffect(() => {
-    if (!router.isReady || !propertyId) {
+    if (!router.isReady || hasHydrated || hasRequestedHydrationRef.current) {
+      return;
+    }
+
+    hasRequestedHydrationRef.current = true;
+
+    if (!shouldRestoreRecommendationSession()) {
+      setHasHydrated(true);
+      return;
+    }
+
+    void useRecommendationStore.persist.rehydrate();
+  }, [hasHydrated, router.isReady, setHasHydrated]);
+
+  useEffect(() => {
+    if (!router.isReady || !propertyId || !hasHydrated) {
+      return;
+    }
+
+    if (cachedDetail) {
+      setDetail(cachedDetail);
+      setError("");
+      setLoading(false);
       return;
     }
 
@@ -148,7 +218,13 @@ const RecommendationDetailPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [propertyId, recommendationQuery, router.isReady]);
+  }, [
+    cachedDetail,
+    hasHydrated,
+    propertyId,
+    recommendationQuery,
+    router.isReady,
+  ]);
 
   if (loading) {
     return <LoadingState />;
@@ -204,22 +280,10 @@ const RecommendationDetailPage = () => {
 
           <RecommendationPropertyDetails property={property} />
 
-          <RecommendationScoreBreakdown
-            breakdown={recommendation.scoreBreakdown}
-            appliedWeights={meta.appliedWeights}
-          />
-
           <div className="grid gap-10 lg:grid-cols-2">
             <RecommendationWhyMatched recommendation={recommendation} />
             <RecommendationTradeOffs recommendation={recommendation} />
           </div>
-
-          <RecommendationFiltersUsed parsedBrief={meta.parsedBrief} />
-
-          <RecommendationDetailCta
-            propertyId={property.id}
-            onBack={handleBack}
-          />
         </div>
       </div>
     </div>

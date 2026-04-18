@@ -21,10 +21,6 @@ const RecommendationPropertyDetails = ({
       value: property.category?.name ?? "Uncategorized",
     },
     {
-      label: "Location",
-      value: property.location,
-    },
-    {
       label: "Price",
       value: formatCompactRecommendationCurrency(property.price),
     },
@@ -49,10 +45,6 @@ const RecommendationPropertyDetails = ({
       value: formatPropertyStatus(property.status),
     },
     {
-      label: "Listed",
-      value: formatDateValue(property.createdAt),
-    },
-    {
       label: "Updated",
       value: formatDateValue(property.updatedAt),
     },
@@ -70,7 +62,7 @@ const RecommendationPropertyDetails = ({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {details.map((item) => (
           <div key={item.label} className="rounded-lg bg-[#f2f3ff] p-4">
             <p className="font-auth-body text-[10px] font-bold uppercase tracking-[0.16em] text-[#9aa0b5]">

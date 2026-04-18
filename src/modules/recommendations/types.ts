@@ -39,6 +39,7 @@ export interface RecommendationPreferencesPayload {
   location?: string;
   latitude?: number;
   longitude?: number;
+  locationRadiusKm?: number;
   price?: number;
   roi?: number;
   area?: number;

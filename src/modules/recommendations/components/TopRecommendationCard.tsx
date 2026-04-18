@@ -57,6 +57,7 @@ const TopRecommendationCard = ({
   const appliedPlaceDetails = useRecommendationStore(
     (state) => state.appliedPlaceDetails,
   );
+  const recommendationMeta = useRecommendationStore((state) => state.summary);
   const image = item.property.primaryImage || item.property.images?.[0];
   const topReasons = item.topReasons.slice(0, 3);
   const isPrimePick = rank === 1;
@@ -70,6 +71,7 @@ const TopRecommendationCard = ({
     {
       appliedValues,
       appliedPlaceDetails,
+      parsedBrief: recommendationMeta,
     },
   );
 
@@ -161,7 +163,7 @@ const TopRecommendationCard = ({
             onClick={handleOpenProperty}
             className="mt-10 inline-flex w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#004ac6_0%,#4b41e1_100%)] px-6 py-4 text-center font-auth-body text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-lg shadow-[#004ac6]/20 transition hover:opacity-95"
           >
-            View Full Property Details
+            View Full Details
           </Link>
         </div>
       </div>

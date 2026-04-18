@@ -3,6 +3,7 @@ import { APP_ROUTES } from "@/config/routes";
 import type {
   RecommendationPlaceDetails,
   RecommendationPreferences,
+  RecommendationParsedBriefMetadata,
   RecommendationQuery,
 } from "@/modules/recommendations/types";
 
@@ -11,6 +12,7 @@ export const RECOMMENDATIONS_RETURN_SOURCE = "recommendations";
 interface RecommendationDetailNavigationContext {
   appliedValues: RecommendationPreferences;
   appliedPlaceDetails?: RecommendationPlaceDetails | null;
+  parsedBrief?: RecommendationParsedBriefMetadata | null;
 }
 
 const getSingleQueryValue = (
@@ -78,8 +80,44 @@ const buildRecommendationDetailQuery = (
     return {};
   }
 
-  const { appliedValues, appliedPlaceDetails } = context;
+  const { appliedValues, appliedPlaceDetails, parsedBrief } = context;
   const query: Record<string, string> = {};
+
+  if (parsedBrief) {
+    const { appliedFilters, appliedPreferences } = parsedBrief;
+
+    setIfFilled(query, "mustHaveCategoryId", appliedFilters.categoryId);
+    setIfFilled(query, "mustHaveCategory", appliedFilters.category);
+    setIfFilled(query, "mustHaveLocation", appliedFilters.location);
+    setIfFilled(query, "maxPrice", appliedFilters.maxPrice);
+    setIfFilled(query, "minRoi", appliedFilters.minRoi);
+    setIfFilled(query, "minArea", appliedFilters.minArea);
+    setIfFilled(
+      query,
+      "mustHaveMaxDistanceFromHighway",
+      appliedFilters.maxDistanceFromHighway,
+    );
+    setIfFilled(query, "mustHaveStatus", appliedFilters.status);
+    setIfFilled(query, "categoryId", appliedPreferences.categoryId);
+    setIfFilled(query, "category", appliedPreferences.category);
+    setIfFilled(query, "location", appliedPreferences.location);
+    setIfFilled(query, "latitude", appliedPreferences.latitude);
+    setIfFilled(query, "longitude", appliedPreferences.longitude);
+    setIfFilled(query, "locationRadiusKm", appliedPreferences.locationRadiusKm);
+    setIfFilled(query, "price", appliedPreferences.price);
+    setIfFilled(query, "roi", appliedPreferences.roi);
+    setIfFilled(query, "area", appliedPreferences.area);
+    setIfFilled(
+      query,
+      "maxDistanceFromHighway",
+      appliedPreferences.maxDistanceFromHighway,
+    );
+    setIfFilled(query, "status", appliedPreferences.status);
+
+    if (Object.keys(query).length > 0) {
+      return query;
+    }
+  }
 
   setIfFilled(query, "brief", appliedValues.brief);
   setIfFilled(
@@ -141,6 +179,7 @@ export const buildRecommendationQueryFromRouteQuery = (
     longitude:
       getQueryNumber(query.longitude) ??
       getQueryNumber(query.preferredLongitude),
+    locationRadiusKm: getQueryNumber(query.locationRadiusKm),
     price: getQueryNumber(query.price),
     roi: getQueryNumber(query.roi) ?? getQueryNumber(query.preferredRoi),
     area: getQueryNumber(query.area) ?? getQueryNumber(query.preferredArea),

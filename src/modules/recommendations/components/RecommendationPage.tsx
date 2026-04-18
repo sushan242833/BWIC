@@ -18,6 +18,7 @@ import {
   RECOMMENDATION_RANGE_LIMITS,
 } from "@/modules/recommendations/constants";
 import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
+import type { RecommendationWeights } from "@/modules/recommendation-settings/types";
 import type {
   RecommendationDetectedEntity,
   RecommendationLocationSuggestion,
@@ -188,6 +189,68 @@ const buildAppliedSummary = (
   return summary;
 };
 
+const buildInactiveWeightWarnings = (
+  metadata: RecommendationParsedBriefMetadata | null,
+  appliedWeights: RecommendationWeights | null,
+): string[] => {
+  if (!metadata || !appliedWeights) {
+    return [];
+  }
+
+  const warnings: string[] = [];
+  const { appliedFilters, appliedPreferences } = metadata;
+
+  const pushWarning = (label: string) => {
+    warnings.push(
+      `${label} was detected, but its ranking weight is set to 0%, so it will not affect scores.`,
+    );
+  };
+
+  if (
+    appliedWeights.location <= 0 &&
+    (appliedFilters.location || appliedPreferences.location)
+  ) {
+    pushWarning("Location");
+  }
+
+  if (
+    appliedWeights.price <= 0 &&
+    ((appliedFilters.maxPrice !== undefined && appliedFilters.maxPrice > 0) ||
+      (appliedPreferences.price !== undefined &&
+        appliedPreferences.price > 0))
+  ) {
+    pushWarning("Price");
+  }
+
+  if (
+    appliedWeights.roi <= 0 &&
+    ((appliedFilters.minRoi !== undefined && appliedFilters.minRoi > 0) ||
+      (appliedPreferences.roi !== undefined && appliedPreferences.roi > 0))
+  ) {
+    pushWarning("ROI");
+  }
+
+  if (
+    appliedWeights.area <= 0 &&
+    ((appliedFilters.minArea !== undefined && appliedFilters.minArea > 0) ||
+      (appliedPreferences.area !== undefined && appliedPreferences.area > 0))
+  ) {
+    pushWarning("Area");
+  }
+
+  if (
+    appliedWeights.highwayAccess <= 0 &&
+    ((appliedFilters.maxDistanceFromHighway !== undefined &&
+      appliedFilters.maxDistanceFromHighway > 0) ||
+      (appliedPreferences.maxDistanceFromHighway !== undefined &&
+        appliedPreferences.maxDistanceFromHighway > 0))
+  ) {
+    pushWarning("Highway access");
+  }
+
+  return warnings;
+};
+
 const RecommendationPage = () => {
   const resultsRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
@@ -272,16 +335,31 @@ const RecommendationPage = () => {
     [recommendationMeta],
   );
 
+  const inactiveWeightWarnings = useMemo(
+    () => buildInactiveWeightWarnings(recommendationMeta, appliedWeights),
+    [appliedWeights, recommendationMeta],
+  );
+
+  const visibleWarnings = useMemo(
+    () => [
+      ...new Set([
+        ...(recommendationMeta?.warnings ?? []),
+        ...inactiveWeightWarnings,
+      ]),
+    ],
+    [inactiveWeightWarnings, recommendationMeta],
+  );
+
   const shouldShowParsedSummary = useMemo(
     () =>
       Boolean(
         recommendationMeta &&
         (recommendationMeta.brief ||
           recommendationMeta.detectedEntities.length > 0 ||
-          recommendationMeta.warnings.length > 0 ||
+          visibleWarnings.length > 0 ||
           appliedSummary.length > 0),
       ),
-    [appliedSummary, recommendationMeta],
+    [appliedSummary, recommendationMeta, visibleWarnings],
   );
 
   const requiresLocationSelection =
@@ -826,12 +904,12 @@ const RecommendationPage = () => {
               </div>
             )}
 
-            {recommendationMeta.warnings.length > 0 && (
+            {visibleWarnings.length > 0 && (
               <div className="mt-5 space-y-3">
                 <p className="font-auth-body text-xs font-semibold uppercase tracking-[0.16em] text-[#8a5a00]">
                   Warnings
                 </p>
-                {recommendationMeta.warnings.map((warning) => (
+                {visibleWarnings.map((warning) => (
                   <div
                     key={warning}
                     className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 font-auth-body text-sm text-amber-900"

@@ -29,6 +29,7 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
   const appliedPlaceDetails = useRecommendationStore(
     (state) => state.appliedPlaceDetails,
   );
+  const recommendationMeta = useRecommendationStore((state) => state.summary);
   const image = item.property.primaryImage || item.property.images?.[0];
   const detailHref = buildRecommendationDetailHref(
     item.property.id,
@@ -36,6 +37,7 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
     {
       appliedValues,
       appliedPlaceDetails,
+      parsedBrief: recommendationMeta,
     },
   );
 
@@ -103,7 +105,7 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
           onClick={handleOpenProperty}
           className="inline-flex w-full items-center justify-center rounded-xl border border-[#004ac6] px-5 py-3 text-center font-auth-body text-xs font-semibold uppercase tracking-[0.18em] text-[#004ac6] transition hover:bg-[#eef2ff]"
         >
-          View Full Property Details
+          View Full Details
         </Link>
       </div>
     </article>
