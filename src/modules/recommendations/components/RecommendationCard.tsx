@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { assetUrl } from "@/lib/api/client";
+import FavoriteButton from "@/modules/favorites/components/FavoriteButton";
 import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
 import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
 import { useRecommendationStore } from "@/modules/recommendations/store/useRecommendationStore";
@@ -64,6 +65,9 @@ const RecommendationCard = ({ item, rank }: RecommendationCardProps) => {
 
         <div className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#131b2e] backdrop-blur">
           Rank #{rank}
+        </div>
+        <div className="absolute left-4 top-4">
+          <FavoriteButton propertyId={item.property.id} />
         </div>
         <div className="absolute right-4 top-4 rounded-lg bg-white px-3 py-1 text-sm font-semibold text-[#131b2e] shadow-sm">
           {item.matchPercentage}% Match

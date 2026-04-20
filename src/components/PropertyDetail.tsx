@@ -5,6 +5,7 @@ import { APP_ROUTES } from "@/config/routes";
 import { contactInfo } from "@/utils/ContactInformation";
 import { capitalize } from "@/utils/Capitalize";
 import { assetUrl } from "@/lib/api/client";
+import FavoriteButton from "@/modules/favorites/components/FavoriteButton";
 import { getProperty } from "@/modules/properties/api";
 import {
   formatPropertyStatus,
@@ -194,7 +195,12 @@ const PropertyDetail = () => {
                 <span className="text-lg">{property.location}</span>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex flex-wrap items-center gap-3">
+              <FavoriteButton
+                propertyId={property.id}
+                variant="inline"
+                showLabel
+              />
               <span
                 className={`px-4 py-2 rounded-full text-sm font-semibold ${getPropertyStatusBadgeClass(
                   property.status,

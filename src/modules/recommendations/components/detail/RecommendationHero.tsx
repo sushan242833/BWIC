@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
 import { assetUrl } from "@/lib/api/client";
+import FavoriteButton from "@/modules/favorites/components/FavoriteButton";
 import {
   formatAreaValue,
   formatCompactRecommendationCurrency,
@@ -73,7 +74,12 @@ const RecommendationHero = ({
             </p>
           </div>
 
-          <div className="sm:ml-auto">
+          <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+            <FavoriteButton
+              propertyId={property.id}
+              variant="inline"
+              showLabel
+            />
             <span className="inline-flex rounded bg-green-100 px-3 py-1 font-auth-body text-xs font-bold uppercase tracking-[0.12em] text-green-800">
               {formatPropertyStatus(property.status)}
             </span>

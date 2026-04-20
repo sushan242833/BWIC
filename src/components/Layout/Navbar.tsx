@@ -7,6 +7,7 @@ import {
   faArrowRightFromBracket,
   faGauge,
   faGear,
+  faHeart,
 } from "@fortawesome/free-solid-svg-icons";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
@@ -113,6 +114,15 @@ const Navbar: React.FC<NavbarProps> = ({
 
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-2 shadow-xl">
+                    <Link
+                      href={APP_ROUTES.favorites}
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      <FontAwesomeIcon icon={faHeart} className="text-sm" />
+                      <span>Favorites</span>
+                    </Link>
+
                     <Link
                       href={APP_ROUTES.settings}
                       onClick={() => setIsProfileOpen(false)}
@@ -251,6 +261,16 @@ const Navbar: React.FC<NavbarProps> = ({
                       </Link>
                     </li>
                   )}
+                  <li>
+                    <Link
+                      href={APP_ROUTES.favorites}
+                      className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FontAwesomeIcon icon={faHeart} className="text-sm" />
+                      <span>Favorites</span>
+                    </Link>
+                  </li>
                   <li>
                     <Link
                       href={APP_ROUTES.settings}

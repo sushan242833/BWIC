@@ -19,6 +19,15 @@ export const API_ENDPOINTS = {
     list: withApiBasePath("/properties"),
     detail: (id: string | number) => withApiBasePath(`/properties/${id}`),
   },
+  favorites: {
+    list: withApiBasePath("/favorites"),
+    add: (propertyId: string | number) =>
+      withApiBasePath(`/favorites/${propertyId}`),
+    remove: (propertyId: string | number) =>
+      withApiBasePath(`/favorites/${propertyId}`),
+    check: (propertyId: string | number) =>
+      withApiBasePath(`/favorites/check/${propertyId}`),
+  },
   categories: {
     list: withApiBasePath("/categories"),
     detail: (id: string | number) => withApiBasePath(`/categories/${id}`),

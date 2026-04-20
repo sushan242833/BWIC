@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { assetUrl } from "@/lib/api/client";
+import FavoriteButton from "@/modules/favorites/components/FavoriteButton";
 import { formatPropertyReference } from "@/modules/properties/reference";
 import { buildRecommendationDetailHref } from "@/modules/recommendations/navigation";
 import { formatRecommendationCurrency } from "@/modules/recommendations/formatters";
@@ -97,6 +98,10 @@ const TopRecommendationCard = ({
 
           <div className="absolute left-6 top-6 rounded-full bg-[linear-gradient(135deg,#645efb_0%,#4b41e1_100%)] px-4 py-2 font-auth-body text-sm font-semibold text-white shadow-lg shadow-[#4b41e1]/30">
             Match {item.matchPercentage}%
+          </div>
+
+          <div className="absolute right-6 top-6">
+            <FavoriteButton propertyId={item.property.id} />
           </div>
         </div>
 

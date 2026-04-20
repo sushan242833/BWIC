@@ -3,6 +3,7 @@ export const APP_ROUTES = {
   about: "/about",
   properties: "/properties",
   propertyDetail: (id: string | number) => `/properties/${id}`,
+  favorites: "/favorites",
   recommendations: "/recommendations",
   recommendationDetail: (propertyId: string | number) =>
     `/recommendations/${propertyId}/details`,

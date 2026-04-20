@@ -12,6 +12,7 @@ import { capitalize } from "@/utils/Capitalize";
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
 import { getCategories } from "@/modules/categories/api";
+import FavoriteButton from "@/modules/favorites/components/FavoriteButton";
 import {
   getLocationPlaceDetails,
   getLocationSuggestions,
@@ -753,6 +754,10 @@ const Properties = () => {
 
                     <div className="absolute left-4 top-4 rounded-full bg-[linear-gradient(135deg,#5a53f5_0%,#726bff_100%)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(75,65,225,0.18)]">
                       {getCategoryLabel(property)}
+                    </div>
+
+                    <div className="absolute right-4 top-4">
+                      <FavoriteButton propertyId={property.id} />
                     </div>
                   </div>
 
