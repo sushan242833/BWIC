@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   contact: "/contact",
   login: "/login",
   register: "/register",
+  verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   forgotPasswordSent: "/forgot-password/sent",
   resetPassword: "/reset-password",
@@ -30,6 +31,7 @@ export const APP_ROUTES = {
 export const FULLSCREEN_ROUTES = new Set<string>([
   APP_ROUTES.login,
   APP_ROUTES.register,
+  APP_ROUTES.verifyEmail,
   APP_ROUTES.adminLogin,
   APP_ROUTES.forgotPassword,
   APP_ROUTES.forgotPasswordSent,
@@ -39,6 +41,7 @@ export const FULLSCREEN_ROUTES = new Set<string>([
 export const SESSION_AWARE_AUTH_ROUTES = new Set<string>([
   APP_ROUTES.login,
   APP_ROUTES.register,
+  APP_ROUTES.verifyEmail,
   APP_ROUTES.adminLogin,
 ]);
 

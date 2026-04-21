@@ -12,6 +12,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   isActive: boolean;
+  isEmailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,11 +24,29 @@ export interface RegisterPayload {
   rememberMe?: boolean;
 }
 
+export interface RegisterResponse {
+  email: string;
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
   rememberMe?: boolean;
   scope?: UserRole;
+}
+
+export interface VerifyEmailPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ResendOtpPayload {
+  email: string;
+}
+
+export interface ResendOtpResponse {
+  email: string;
+  resendCooldownSeconds: number;
 }
 
 export interface ForgotPasswordPayload {

@@ -15,6 +15,7 @@ import {
   AuthUser,
   LoginPayload,
   RegisterPayload,
+  RegisterResponse,
   USER_ROLE,
 } from "@/modules/auth/types";
 
@@ -25,7 +26,7 @@ interface AuthContextValue {
   isLoading: boolean;
   refreshUser: () => Promise<AuthUser | null>;
   login: (payload: LoginPayload) => Promise<AuthUser>;
-  register: (payload: RegisterPayload) => Promise<AuthUser>;
+  register: (payload: RegisterPayload) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
 }
 
@@ -59,9 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (payload: RegisterPayload) => {
-    const authenticatedUser = await registerUser(payload);
-    setUser(authenticatedUser);
-    return authenticatedUser;
+    return registerUser(payload);
   };
 
   const logout = async () => {

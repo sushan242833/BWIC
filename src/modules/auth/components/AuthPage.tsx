@@ -2,10 +2,14 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Eye, EyeOff } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  clearEmailVerificationState,
+  persistEmailVerificationState,
+} from "@/modules/auth/email-verification-storage";
 import { AuthUser, USER_ROLE, UserRole } from "@/modules/auth/types";
 
 type AuthPageMode = "login" | "register";
@@ -20,6 +24,9 @@ const safeRedirect = (value: string | string[] | undefined) => {
   if (!value.startsWith("/") || value.startsWith("//")) return undefined;
   return value;
 };
+
+const firstQueryValue = (value: string | string[] | undefined) =>
+  typeof value === "string" ? value : value?.[0];
 
 const resolveLandingPath = (
   user: AuthUser,
@@ -61,13 +68,17 @@ export default function AuthPage({
   const isRegister = mode === "register";
   const isAdminLogin = mode === "login" && portal === USER_ROLE.ADMIN;
   const requestedRedirect = safeRedirect(router.query.redirect);
+  const verificationNotice =
+    !isRegister && firstQueryValue(router.query.verified) === "1"
+      ? "Email verified successfully. Please sign in."
+      : "";
 
   const pageCopy = useMemo(() => {
     if (isRegister) {
       return {
         title: "Create your investor account",
         subtitle:
-          "Start building your Blue Whale profile for future portfolio tools.",
+          "Create your account and we will send a one-time code to verify your email before your first login.",
         submitLabel: "Create Account",
         footer: (
           <p className="text-sm text-[#434655]">
@@ -101,26 +112,56 @@ export default function AuthPage({
     };
   }, [isAdminLogin, isRegister]);
 
+  useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+
+    const queryEmail = firstQueryValue(router.query.email);
+
+    if (queryEmail) {
+      setEmail(queryEmail.trim().toLowerCase());
+    }
+  }, [router.isReady, router.query.email]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
 
     try {
-      const authenticatedUser = isRegister
-        ? await register({
-            fullName,
-            email,
-            password,
-            rememberMe,
-          })
-        : await login({
-            email,
-            password,
-            rememberMe,
-            scope: isAdminLogin ? USER_ROLE.ADMIN : undefined,
-          });
+      const normalizedEmail = email.trim().toLowerCase();
 
+      if (isRegister) {
+        const registration = await register({
+          fullName,
+          email: normalizedEmail,
+          password,
+          rememberMe,
+        });
+
+        persistEmailVerificationState({
+          email: registration.email,
+          resendCooldownSeconds: 0,
+          sentAt: 0,
+        });
+
+        await router.replace(
+          `${APP_ROUTES.verifyEmail}?email=${encodeURIComponent(
+            registration.email,
+          )}`,
+        );
+        return;
+      }
+
+      const authenticatedUser = await login({
+        email: normalizedEmail,
+        password,
+        rememberMe,
+        scope: isAdminLogin ? USER_ROLE.ADMIN : undefined,
+      });
+
+      clearEmailVerificationState();
       await router.replace(
         resolveLandingPath(
           authenticatedUser,
@@ -129,6 +170,25 @@ export default function AuthPage({
         ),
       );
     } catch (submissionError) {
+      if (
+        !isRegister &&
+        submissionError instanceof Error &&
+        submissionError.message.toLowerCase().includes("verify your email")
+      ) {
+        const normalizedEmail = email.trim().toLowerCase();
+        persistEmailVerificationState({
+          email: normalizedEmail,
+          resendCooldownSeconds: 0,
+          sentAt: 0,
+        });
+        await router.replace(
+          `${APP_ROUTES.verifyEmail}?email=${encodeURIComponent(
+            normalizedEmail,
+          )}`,
+        );
+        return;
+      }
+
       setError(
         submissionError instanceof Error
           ? submissionError.message
@@ -315,19 +375,27 @@ export default function AuthPage({
                   </div>
                 </div>
 
-                <label className="flex items-center gap-3 text-sm font-medium text-[#434655]">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(event) => setRememberMe(event.target.checked)}
-                    className="h-4 w-4 rounded border border-[#c3c6d7] text-[#004ac6] focus:ring-[#004ac6]/30"
-                  />
-                  Stay signed in for 30 days
-                </label>
+                {!isRegister && (
+                  <label className="flex items-center gap-3 text-sm font-medium text-[#434655]">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                      className="h-4 w-4 rounded border border-[#c3c6d7] text-[#004ac6] focus:ring-[#004ac6]/30"
+                    />
+                    Stay signed in for 30 days
+                  </label>
+                )}
 
-                {error && (
-                  <div className="rounded-lg border border-[#ffdad6] bg-[#fff1ef] px-4 py-3 text-sm text-[#93000a]">
-                    {error}
+                {(verificationNotice || error) && (
+                  <div
+                    className={`rounded-lg px-4 py-3 text-sm ${
+                      error
+                        ? "border border-[#ffdad6] bg-[#fff1ef] text-[#93000a]"
+                        : "border border-[#dbe1ff] bg-[#eef0ff] text-[#004ac6]"
+                    }`}
+                  >
+                    {error || verificationNotice}
                   </div>
                 )}
 

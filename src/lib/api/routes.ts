@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
     me: withApiBasePath("/auth/me"),
     register: withApiBasePath("/auth/register"),
     login: withApiBasePath("/auth/login"),
+    verifyEmail: withApiBasePath("/auth/verify-email"),
+    resendOtp: withApiBasePath("/auth/resend-otp"),
     forgotPassword: withApiBasePath("/auth/forgot-password"),
     validateResetToken: withApiBasePath("/auth/validate-reset-token"),
     resetPassword: withApiBasePath("/auth/reset-password"),
