@@ -27,6 +27,7 @@ export type PropertyStatusValue =
   (typeof PROPERTY_STATUS_OPTIONS)[number]["value"];
 
 export const PROPERTY_SORT_OPTIONS = [
+  { value: "random", label: "Featured" },
   { value: "newest", label: "Newest" },
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },

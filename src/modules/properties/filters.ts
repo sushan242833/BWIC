@@ -35,7 +35,7 @@ export const defaultPropertyFilters: PropertyFilters = {
   maxDistanceFromHighway: "",
 };
 
-export const defaultPropertySort: PropertySortValue = "newest";
+export const defaultPropertySort: PropertySortValue = "random";
 
 export interface PropertyFilterQuery extends Partial<PropertyFilters> {
   search?: string;
@@ -54,11 +54,7 @@ export const buildPropertySearchParams = (
   }
 
   Object.entries(params).forEach(([key, value]) => {
-    if (
-      value !== undefined &&
-      value !== null &&
-      String(value).trim() !== ""
-    ) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
       searchParams.set(key, String(value));
     }
   });
