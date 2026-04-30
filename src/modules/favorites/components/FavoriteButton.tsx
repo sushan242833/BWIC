@@ -2,6 +2,7 @@ import { MouseEvent, useEffect, useState } from "react";
 import { Heart, Loader2 } from "lucide-react";
 import AuthRequiredModal from "@/components/AuthRequiredModal";
 import { useAuth } from "@/hooks/useAuth";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import {
   addFavorite,
   checkFavoriteStatus,
@@ -100,6 +101,11 @@ const FavoriteButton = ({
       return;
     }
 
+    if (!Number.isFinite(numericPropertyId) || numericPropertyId <= 0) {
+      setError("This property could not be found.");
+      return;
+    }
+
     const nextValue = !isFavorited;
     setIsSaving(true);
     setError("");
@@ -115,11 +121,7 @@ const FavoriteButton = ({
     } catch (toggleError) {
       console.error("Failed to update favorite:", toggleError);
       setIsFavorited(!nextValue);
-      setError(
-        toggleError instanceof Error
-          ? toggleError.message
-          : "Could not update favorite.",
-      );
+      setError(getApiErrorMessage(toggleError, "Could not update favorite."));
     } finally {
       setIsSaving(false);
     }

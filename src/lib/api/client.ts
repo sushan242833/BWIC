@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "@/lib/config";
+import { buildApiError } from "@/lib/api/errors";
 
 type ApiSuccessResponse<T> = {
   success: boolean;
@@ -30,29 +31,13 @@ export const apiFetch = (
   });
 };
 
-const getErrorMessage = async (response: Response): Promise<string> => {
-  try {
-    const payload = await response.json();
-    if (payload && typeof payload === "object" && "message" in payload) {
-      const message = payload.message;
-      if (typeof message === "string" && message.trim()) {
-        return message;
-      }
-    }
-  } catch {
-    // Ignore JSON parse errors and fall back to status text.
-  }
-
-  return response.statusText || "Request failed";
-};
-
 export const getJson = async <T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> => {
   const response = await apiFetch(path, init);
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await buildApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -84,7 +69,7 @@ export const sendJson = async <T>(
   });
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await buildApiError(response);
   }
 
   if (response.status === 204) {
@@ -119,10 +104,21 @@ export const sendForm = async <T>(
   });
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await buildApiError(response);
   }
 
   return response.json() as Promise<T>;
+};
+
+export const sendFormApiData = async <T>(
+  path: string,
+  options: {
+    method: "POST" | "PUT" | "PATCH";
+    body: FormData;
+  },
+): Promise<T> => {
+  const payload = await sendForm<ApiSuccessResponse<T>>(path, options);
+  return payload.data;
 };
 
 export const assetUrl = (path: string): string => {

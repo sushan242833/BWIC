@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, MapPinned } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import {
   getLocationPlaceDetails,
   getLocationSuggestions,
@@ -11,6 +12,7 @@ import {
   getRecommendations,
 } from "@/modules/recommendations/api";
 import RecommendationResults from "@/modules/recommendations/components/RecommendationResults";
+import { validateRecommendationForm } from "@/modules/recommendations/form-validation";
 import {
   DEFAULT_RECOMMENDATION_PAGINATION,
   EMPTY_RECOMMENDATION_TOTAL_PAGES,
@@ -296,6 +298,7 @@ const RecommendationPage = () => {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [locationSuggestions, setLocationSuggestions] = useState<
     RecommendationLocationSuggestion[]
   >([]);
@@ -451,11 +454,7 @@ const RecommendationPage = () => {
         }
 
         console.error("Failed to fetch recommendations:", fetchError);
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : RECOMMENDATION_FORM_TEXT.loadError,
-        );
+        setError(getApiErrorMessage(fetchError, RECOMMENDATION_FORM_TEXT.loadError));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -554,6 +553,16 @@ const RecommendationPage = () => {
       name as keyof RecommendationPreferences,
       value as RecommendationPreferences[keyof RecommendationPreferences],
     );
+    setFieldErrors((current) => {
+      if (!current[name]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
+    setError("");
 
     if (name === "location") {
       clearSelectedPlace();
@@ -583,6 +592,15 @@ const RecommendationPage = () => {
     setSelectedPlace(suggestion.placeId, null);
     setLocationSuggestions([]);
     setIsLocationDropdownOpen(false);
+    setFieldErrors((current) => {
+      if (!current.location) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next.location;
+      return next;
+    });
 
     try {
       const placeDetails = await getLocationPlaceDetails(suggestion.placeId);
@@ -594,10 +612,17 @@ const RecommendationPage = () => {
   };
 
   const applyBrief = () => {
-    if (requiresLocationSelection) {
+    const validationErrors = validateRecommendationForm(formValues, {
+      requiresLocationSelection,
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError("Please correct the highlighted fields and try again.");
       return;
     }
 
+    setFieldErrors({});
     setScrollY(0);
     applyRecommendationPayload({
       appliedValues: {
@@ -692,7 +717,11 @@ const RecommendationPage = () => {
                 onChange={handlePreferenceChange}
                 onFocus={() => setIsLocationDropdownOpen(true)}
                 placeholder={RECOMMENDATION_FORM_TEXT.locationPlaceholder}
-                className={formFieldClassName}
+                className={`${formFieldClassName} ${
+                  fieldErrors.location
+                    ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                    : ""
+                }`}
               />
 
               {isLocationDropdownOpen &&
@@ -728,6 +757,11 @@ const RecommendationPage = () => {
                   </div>
                 )}
             </div>
+            {fieldErrors.location ? (
+              <p className="font-auth-body text-sm text-[#93000a]">
+                {fieldErrors.location}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-3">
@@ -738,8 +772,17 @@ const RecommendationPage = () => {
               value={formValues.price}
               onChange={handlePreferenceChange}
               placeholder={RECOMMENDATION_FORM_TEXT.pricePlaceholder}
-              className={formFieldClassName}
+              className={`${formFieldClassName} ${
+                fieldErrors.price
+                  ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                  : ""
+              }`}
             />
+            {fieldErrors.price ? (
+              <p className="font-auth-body text-sm text-[#93000a]">
+                {fieldErrors.price}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-3">
@@ -780,8 +823,17 @@ const RecommendationPage = () => {
               value={formValues.area}
               onChange={handlePreferenceChange}
               placeholder={RECOMMENDATION_FORM_TEXT.areaPlaceholder}
-              className={formFieldClassName}
+              className={`${formFieldClassName} ${
+                fieldErrors.area
+                  ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                  : ""
+              }`}
             />
+            {fieldErrors.area ? (
+              <p className="font-auth-body text-sm text-[#93000a]">
+                {fieldErrors.area}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-3">
@@ -838,6 +890,12 @@ const RecommendationPage = () => {
         </form>
 
         <div className="mt-6 space-y-4">
+          {error && Object.keys(fieldErrors).length > 0 && (
+            <div className="rounded-2xl border border-[#ffdad6] bg-[#fff1ef] px-4 py-3 font-auth-body text-sm text-[#93000a]">
+              {error}
+            </div>
+          )}
+
           {requiresLocationSelection && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 font-auth-body text-sm text-amber-800">
               {RECOMMENDATION_FORM_TEXT.requiresLocationSelection}

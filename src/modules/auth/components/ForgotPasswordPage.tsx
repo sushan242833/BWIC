@@ -3,16 +3,16 @@ import { useRouter } from "next/router";
 import { FormEvent, useState } from "react";
 import { ArrowLeft, KeyRound, Mail } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { forgotPassword } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
+import { validateForgotPasswordForm } from "@/modules/auth/form-validation";
 import { persistPasswordResetState } from "@/modules/auth/password-reset-storage";
-
-const isValidEmail = (value: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,12 +20,17 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
 
     const normalizedEmail = email.trim().toLowerCase();
+    const validationErrors = validateForgotPasswordForm({
+      email: normalizedEmail,
+    });
 
-    if (!isValidEmail(normalizedEmail)) {
-      setError("Please enter a valid email address.");
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError("Please correct the highlighted fields and try again.");
       return;
     }
 
+    setFieldErrors({});
     setError("");
     setIsSubmitting(true);
 
@@ -38,9 +43,10 @@ export default function ForgotPasswordPage() {
       await router.push(APP_ROUTES.forgotPasswordSent);
     } catch (submissionError) {
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Unable to send a reset link right now.",
+        getApiErrorMessage(
+          submissionError,
+          "Unable to send a reset link right now.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -77,14 +83,25 @@ export default function ForgotPasswordPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setFieldErrors({});
+                    setError("");
+                  }}
                   placeholder="bwic@gmail.com"
                   autoComplete="email"
-                  className="auth-recovery-input w-full rounded-[18px] border border-transparent px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none placeholder:text-[#737686]"
+                  className={`auth-recovery-input w-full rounded-[18px] border px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none placeholder:text-[#737686] ${
+                    fieldErrors.email
+                      ? "border-[#ba1a1a] bg-[#fff1ef]"
+                      : "border-transparent"
+                  }`}
                   required
                 />
                 <Mail className="pointer-events-none absolute top-1/2 right-5 h-6 w-6 -translate-y-1/2 text-[#737686]" />
               </div>
+              {fieldErrors.email ? (
+                <p className="text-sm text-[#93000a]">{fieldErrors.email}</p>
+              ) : null}
               <p className="text-sm leading-6 text-[#737686]">
                 We&apos;ll always return the same response to protect account
                 privacy.

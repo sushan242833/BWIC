@@ -63,6 +63,10 @@ interface PropertyFormScreenProps {
   mode: "create" | "edit";
   formData: PropertyFormData;
   errors: Record<string, string>;
+  formMessage?: {
+    tone: "error" | "success";
+    text: string;
+  } | null;
   categories: CategoryOption[];
   loadingCategories: boolean;
   locationQuery: string;
@@ -178,6 +182,7 @@ export default function PropertyFormScreen({
   mode,
   formData,
   errors,
+  formMessage = null,
   categories,
   loadingCategories,
   locationQuery,
@@ -309,6 +314,18 @@ export default function PropertyFormScreen({
         </div>
 
         <form onSubmit={onSubmit} className="mt-8 space-y-7 lg:space-y-8">
+          {formMessage ? (
+            <div
+              className={`rounded-[1.4rem] border px-5 py-4 text-sm font-medium ${
+                formMessage.tone === "error"
+                  ? "border-[#ffdad6] bg-[#fff1ef] text-[#93000a]"
+                  : "border-[#dbe1ff] bg-[#eef0ff] text-[#004ac6]"
+              }`}
+            >
+              {formMessage.text}
+            </div>
+          ) : null}
+
           <section className={`${panelClassName} overflow-visible`}>
             <div className={sectionHeaderClassName}>
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#004ac6] shadow-[0_10px_24px_rgba(0,74,198,0.12)]">
@@ -716,6 +733,12 @@ export default function PropertyFormScreen({
                     {getImageCapacityText(previewImages.length)}
                   </p>
                 </label>
+
+                {errors.images ? (
+                  <p className="mt-3 text-sm font-medium text-[#c81e1e]">
+                    {errors.images}
+                  </p>
+                ) : null}
               </div>
             </section>
 

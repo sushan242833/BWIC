@@ -12,8 +12,13 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "@/lib/api/errors";
 import { resetPassword, validateResetToken } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
+import { validateResetPasswordForm } from "@/modules/auth/form-validation";
 import {
   getPasswordStrengthError,
   PASSWORD_MIN_LENGTH,
@@ -59,6 +64,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,9 +105,10 @@ export default function ResetPasswordPage() {
 
         setTokenStatus("invalid");
         setTokenMessage(
-          validationError instanceof Error
-            ? validationError.message
-            : "This password reset link is invalid or has expired.",
+          getApiErrorMessage(
+            validationError,
+            "This password reset link is invalid or has expired.",
+          ),
         );
       });
 
@@ -122,23 +129,23 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const strengthError = getPasswordStrengthError(newPassword);
+    const validationErrors = validateResetPasswordForm({
+      token,
+      newPassword,
+      confirmPassword,
+    });
 
-    if (strengthError) {
-      setError(strengthError);
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError(
+        validationErrors.newPassword || validationErrors.confirmPassword
+          ? "Please correct the highlighted fields and try again."
+          : "This password reset link is invalid or has expired.",
+      );
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (!token) {
-      setError("This password reset link is invalid or has expired.");
-      return;
-    }
-
+    setFieldErrors({});
     setError("");
     setIsSubmitting(true);
 
@@ -156,10 +163,12 @@ export default function ResetPasswordPage() {
         void router.replace(APP_ROUTES.login);
       }, 1800);
     } catch (submissionError) {
+      setFieldErrors(getApiFieldErrors(submissionError));
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Unable to reset your password right now.",
+        getApiErrorMessage(
+          submissionError,
+          "Unable to reset your password right now.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -261,9 +270,25 @@ export default function ResetPasswordPage() {
                   id="newPassword"
                   type={showNewPassword ? "text" : "password"}
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                    setFieldErrors((current) => {
+                      if (!current.newPassword) {
+                        return current;
+                      }
+
+                      const next = { ...current };
+                      delete next.newPassword;
+                      return next;
+                    });
+                    setError("");
+                  }}
                   autoComplete="new-password"
-                  className="w-full rounded-[16px] border border-transparent bg-[#eef0ff] px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none transition placeholder:text-[#9aa1b8] focus:border-[#dbe1ff] focus:ring-4 focus:ring-[#004ac6]/12"
+                  className={`w-full rounded-[16px] border px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none transition placeholder:text-[#9aa1b8] focus:ring-4 ${
+                    fieldErrors.newPassword
+                      ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/12"
+                      : "border-transparent bg-[#eef0ff] focus:border-[#dbe1ff] focus:ring-[#004ac6]/12"
+                  }`}
                   placeholder="••••••••"
                   required
                 />
@@ -282,6 +307,11 @@ export default function ResetPasswordPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.newPassword ? (
+                <p className="text-sm text-[#93000a]">
+                  {fieldErrors.newPassword}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -296,9 +326,25 @@ export default function ResetPasswordPage() {
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setFieldErrors((current) => {
+                      if (!current.confirmPassword) {
+                        return current;
+                      }
+
+                      const next = { ...current };
+                      delete next.confirmPassword;
+                      return next;
+                    });
+                    setError("");
+                  }}
                   autoComplete="new-password"
-                  className="w-full rounded-[16px] border border-transparent bg-[#eef0ff] px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none transition placeholder:text-[#9aa1b8] focus:border-[#dbe1ff] focus:ring-4 focus:ring-[#004ac6]/12"
+                  className={`w-full rounded-[16px] border px-5 py-4 pr-14 text-lg text-[#131b2e] outline-none transition placeholder:text-[#9aa1b8] focus:ring-4 ${
+                    fieldErrors.confirmPassword
+                      ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/12"
+                      : "border-transparent bg-[#eef0ff] focus:border-[#dbe1ff] focus:ring-[#004ac6]/12"
+                  }`}
                   placeholder="••••••••"
                   required
                 />
@@ -317,6 +363,11 @@ export default function ResetPasswordPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.confirmPassword ? (
+                <p className="text-sm text-[#93000a]">
+                  {fieldErrors.confirmPassword}
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-[18px] bg-[#eef0ff]/80 p-5">

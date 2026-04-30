@@ -6,10 +6,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import { APP_ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/errors";
 import {
   clearEmailVerificationState,
   persistEmailVerificationState,
 } from "@/modules/auth/email-verification-storage";
+import {
+  validateLoginForm,
+  validateRegisterForm,
+} from "@/modules/auth/form-validation";
 import { AuthUser, USER_ROLE, UserRole } from "@/modules/auth/types";
 
 type AuthPageMode = "login" | "register";
@@ -62,6 +67,7 @@ export default function AuthPage({
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -124,9 +130,32 @@ export default function AuthPage({
     }
   }, [router.isReady, router.query.email]);
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    const validationErrors = isRegister
+      ? validateRegisterForm({ fullName, email, password })
+      : validateLoginForm({ email, password });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError("Please correct the highlighted fields and try again.");
+      return;
+    }
+
+    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
@@ -189,10 +218,14 @@ export default function AuthPage({
         return;
       }
 
+      setFieldErrors(getApiFieldErrors(submissionError));
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Unable to complete your request right now.",
+        getApiErrorMessage(
+          submissionError,
+          isRegister
+            ? "Unable to create your account right now."
+            : "Unable to log in right now. Please try again later.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -303,11 +336,24 @@ export default function AuthPage({
                       id="fullName"
                       type="text"
                       value={fullName}
-                      onChange={(event) => setFullName(event.target.value)}
+                      onChange={(event) => {
+                        setFullName(event.target.value);
+                        clearFieldError("fullName");
+                        setError("");
+                      }}
                       placeholder="Your full name"
-                      className="w-full rounded-lg bg-[#dae2fd] px-4 py-3.5 text-[#131b2e] outline-none transition focus:ring-2 focus:ring-[#004ac6]/20"
+                      className={`w-full rounded-lg px-4 py-3.5 text-[#131b2e] outline-none transition focus:ring-2 ${
+                        fieldErrors.fullName
+                          ? "border border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                          : "bg-[#dae2fd] focus:ring-[#004ac6]/20"
+                      }`}
                       required
                     />
+                    {fieldErrors.fullName ? (
+                      <p className="text-sm text-[#93000a]">
+                        {fieldErrors.fullName}
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
@@ -316,17 +362,30 @@ export default function AuthPage({
                     className="block text-sm font-semibold text-[#131b2e]"
                     htmlFor="email"
                   >
-                    Email or Username
+                    Email Address
                   </label>
                   <input
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      clearFieldError("email");
+                      setError("");
+                    }}
                     placeholder="bwic@gmail.com"
-                    className="w-full rounded-lg bg-[#dae2fd] px-4 py-3.5 text-[#131b2e] outline-none transition placeholder:text-[#8c93ad] focus:ring-2 focus:ring-[#004ac6]/20"
+                    className={`w-full rounded-lg px-4 py-3.5 text-[#131b2e] outline-none transition placeholder:text-[#8c93ad] focus:ring-2 ${
+                      fieldErrors.email
+                        ? "border border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                        : "bg-[#dae2fd] focus:ring-[#004ac6]/20"
+                    }`}
                     required
                   />
+                  {fieldErrors.email ? (
+                    <p className="text-sm text-[#93000a]">
+                      {fieldErrors.email}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -352,9 +411,17 @@ export default function AuthPage({
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        clearFieldError("password");
+                        setError("");
+                      }}
                       placeholder="••••••••"
-                      className="w-full rounded-lg bg-[#dae2fd] px-4 py-3.5 pr-12 text-[#131b2e] outline-none transition placeholder:text-[#8c93ad] focus:ring-2 focus:ring-[#004ac6]/20"
+                      className={`w-full rounded-lg px-4 py-3.5 pr-12 text-[#131b2e] outline-none transition placeholder:text-[#8c93ad] focus:ring-2 ${
+                        fieldErrors.password
+                          ? "border border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/20"
+                          : "bg-[#dae2fd] focus:ring-[#004ac6]/20"
+                      }`}
                       required
                       minLength={8}
                     />
@@ -373,6 +440,11 @@ export default function AuthPage({
                       )}
                     </button>
                   </div>
+                  {fieldErrors.password ? (
+                    <p className="text-sm text-[#93000a]">
+                      {fieldErrors.password}
+                    </p>
+                  ) : null}
                 </div>
 
                 {!isRegister && (

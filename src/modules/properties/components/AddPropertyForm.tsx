@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "@/lib/api/errors";
 import { getCategories } from "@/modules/categories/api";
 import { getLocationSuggestions } from "@/modules/locations/api";
 import { createProperty } from "@/modules/properties/api";
@@ -69,6 +73,10 @@ const AddPropertyForm: React.FC = () => {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState<{
+    tone: "error" | "success";
+    text: string;
+  } | null>(null);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
     LocationSuggestion[]
@@ -84,6 +92,10 @@ const AddPropertyForm: React.FC = () => {
         setCategories(data);
       } catch (error) {
         console.error("Error fetching categories:", error);
+        setFormMessage({
+          tone: "error",
+          text: "We couldn't load categories right now.",
+        });
       } finally {
         setLoadingCategories(false);
       }
@@ -130,6 +142,7 @@ const AddPropertyForm: React.FC = () => {
       [name]: value,
     }));
     setErrors((previous) => removeFieldError(previous, String(name)));
+    setFormMessage(null);
   };
 
   const handleChange = (
@@ -163,7 +176,11 @@ const AddPropertyForm: React.FC = () => {
     const totalFiles = formData.images.length + files.length;
 
     if (totalFiles > PROPERTY_IMAGE_UPLOAD_LIMIT) {
-      alert(PROPERTY_FORM_MESSAGES.imageLimitError);
+      setErrors((previous) => ({
+        ...previous,
+        images: PROPERTY_FORM_MESSAGES.imageLimitError,
+      }));
+      setFormMessage(null);
       return;
     }
 
@@ -172,7 +189,11 @@ const AddPropertyForm: React.FC = () => {
     );
 
     if (oversizedFile) {
-      alert(PROPERTY_FORM_MESSAGES.imageSizeError);
+      setErrors((previous) => ({
+        ...previous,
+        images: PROPERTY_FORM_MESSAGES.imageSizeError,
+      }));
+      setFormMessage(null);
       return;
     }
 
@@ -181,6 +202,7 @@ const AddPropertyForm: React.FC = () => {
       images: [...previous.images, ...files],
     }));
     setErrors((previous) => removeFieldError(previous, "images"));
+    setFormMessage(null);
 
     const nextPreviews = files.map((file) => URL.createObjectURL(file));
     setPreviews((previous) => [...previous, ...nextPreviews]);
@@ -195,6 +217,7 @@ const AddPropertyForm: React.FC = () => {
     setSelectedLocationPlaceId("");
     setFormData((previous) => ({ ...previous, location: "" }));
     setErrors((previous) => removeFieldError(previous, "location"));
+    setFormMessage(null);
   };
 
   const handleLocationSelect = (selected: LocationSuggestion) => {
@@ -207,6 +230,7 @@ const AddPropertyForm: React.FC = () => {
       PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
     );
     setErrors((previous) => removeFieldError(previous, "location"));
+    setFormMessage(null);
   };
 
   const removeImage = (index: number) => {
@@ -232,6 +256,7 @@ const AddPropertyForm: React.FC = () => {
     setFormData(createEmptyPropertyFormData());
     setPreviews([]);
     setErrors({});
+    setFormMessage(null);
     setLocationQuery("");
     setLocationSuggestions([]);
     setSelectedLocationPlaceId("");
@@ -244,6 +269,14 @@ const AddPropertyForm: React.FC = () => {
     });
 
     setErrors(nextErrors);
+    setFormMessage(
+      Object.keys(nextErrors).length > 0
+        ? {
+            tone: "error",
+            text: "Please correct the highlighted fields and try again.",
+          }
+        : null,
+    );
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -255,16 +288,25 @@ const AddPropertyForm: React.FC = () => {
     }
 
     setSubmitting(true);
+    setFormMessage(null);
 
     try {
-      const data = await createProperty(formData);
-
-      alert(PROPERTY_FORM_MESSAGES.addSuccess);
-      console.log("Created property:", data);
+      await createProperty(formData);
       resetForm();
+      setFormMessage({
+        tone: "success",
+        text: PROPERTY_FORM_MESSAGES.addSuccess,
+      });
     } catch (error) {
       console.error(error);
-      alert(PROPERTY_FORM_MESSAGES.addError);
+      setErrors((previous) => ({
+        ...previous,
+        ...getApiFieldErrors(error),
+      }));
+      setFormMessage({
+        tone: "error",
+        text: getApiErrorMessage(error, PROPERTY_FORM_MESSAGES.addError),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -289,6 +331,7 @@ const AddPropertyForm: React.FC = () => {
       mode="create"
       formData={formData}
       errors={errors}
+      formMessage={formMessage}
       categories={categories}
       loadingCategories={loadingCategories}
       locationQuery={locationQuery}

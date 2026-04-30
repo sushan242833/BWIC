@@ -1,5 +1,10 @@
 import { API_ENDPOINTS } from "@/lib/api/routes";
-import { getApiData, getJson, sendForm, sendJson } from "@/lib/api/client";
+import {
+  getApiData,
+  getJson,
+  sendFormApiData,
+  sendJson,
+} from "@/lib/api/client";
 import {
   buildPropertySearchParams,
   PropertyFilterQuery,
@@ -24,13 +29,13 @@ export const getProperty = (id: string | number) =>
   getApiData<PropertyDetail>(API_ENDPOINTS.properties.detail(id));
 
 export const createProperty = (data: PropertyFormData) =>
-  sendForm(API_ENDPOINTS.properties.list, {
+  sendFormApiData<PropertyDetail>(API_ENDPOINTS.properties.list, {
     method: "POST",
     body: buildPropertyFormPayload(data),
   });
 
 export const updateProperty = (id: string | number, data: PropertyFormData) =>
-  sendForm(API_ENDPOINTS.properties.detail(id), {
+  sendFormApiData<PropertyDetail>(API_ENDPOINTS.properties.detail(id), {
     method: "PUT",
     body: buildPropertyFormPayload(data),
   });

@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { MailCheck } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { forgotPassword } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
 import {
@@ -87,9 +88,10 @@ export default function ForgotPasswordSentPage() {
       );
     } catch (resendError) {
       setError(
-        resendError instanceof Error
-          ? resendError.message
-          : "Unable to resend the reset link right now.",
+        getApiErrorMessage(
+          resendError,
+          "Unable to resend the reset link right now.",
+        ),
       );
     } finally {
       setIsResending(false);

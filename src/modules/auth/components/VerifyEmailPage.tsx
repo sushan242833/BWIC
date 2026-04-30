@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/errors";
 import { resendOtp, verifyEmail } from "@/modules/auth/api";
 import RecoveryShell from "@/modules/auth/components/RecoveryShell";
 import {
@@ -10,6 +11,7 @@ import {
   persistEmailVerificationState,
   readEmailVerificationState,
 } from "@/modules/auth/email-verification-storage";
+import { validateVerifyEmailForm } from "@/modules/auth/form-validation";
 
 const formatCountdown = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -40,6 +42,7 @@ export default function VerifyEmailPage() {
   const [sentAt, setSentAt] = useState(0);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,6 +111,15 @@ export default function VerifyEmailPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const validationErrors = validateVerifyEmailForm({ email, otp });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError("Please correct the highlighted fields and try again.");
+      return;
+    }
+
+    setFieldErrors({});
     setError("");
     setStatusMessage("");
     setIsSubmitting(true);
@@ -127,10 +139,12 @@ export default function VerifyEmailPage() {
         )}&verified=1`,
       );
     } catch (verificationError) {
+      setFieldErrors(getApiFieldErrors(verificationError));
       setError(
-        verificationError instanceof Error
-          ? verificationError.message
-          : "Unable to verify your email right now.",
+        getApiErrorMessage(
+          verificationError,
+          "Unable to verify your email right now.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -142,6 +156,26 @@ export default function VerifyEmailPage() {
       return;
     }
 
+    const validationErrors = validateVerifyEmailForm({
+      email,
+      otp: "000000",
+    });
+
+    if (validationErrors.email) {
+      setFieldErrors({ email: validationErrors.email });
+      setError(validationErrors.email);
+      return;
+    }
+
+    setFieldErrors((current) => {
+      if (!current.email) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next.email;
+      return next;
+    });
     setError("");
     setStatusMessage("");
     setIsResending(true);
@@ -162,9 +196,7 @@ export default function VerifyEmailPage() {
       setStatusMessage("A fresh verification code has been sent to your email.");
     } catch (resendError) {
       setError(
-        resendError instanceof Error
-          ? resendError.message
-          : "Unable to resend the OTP right now.",
+        getApiErrorMessage(resendError, "Unable to resend the OTP right now."),
       );
     } finally {
       setIsResending(false);
@@ -213,11 +245,30 @@ export default function VerifyEmailPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setFieldErrors((current) => {
+                      if (!current.email) {
+                        return current;
+                      }
+
+                      const next = { ...current };
+                      delete next.email;
+                      return next;
+                    });
+                    setError("");
+                  }}
                   placeholder="user@example.com"
-                  className="w-full rounded-[18px] border border-[#d8dff5] bg-white px-4 py-4 text-base text-[#131b2e] outline-none transition focus:border-[#004ac6] focus:ring-4 focus:ring-[#004ac6]/10"
+                  className={`w-full rounded-[18px] border px-4 py-4 text-base text-[#131b2e] outline-none transition focus:ring-4 ${
+                    fieldErrors.email
+                      ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/10"
+                      : "border-[#d8dff5] bg-white focus:border-[#004ac6] focus:ring-[#004ac6]/10"
+                  }`}
                   required
                 />
+                {fieldErrors.email ? (
+                  <p className="text-sm text-[#93000a]">{fieldErrors.email}</p>
+                ) : null}
               </label>
             )}
 
@@ -231,13 +282,32 @@ export default function VerifyEmailPage() {
                 autoComplete="one-time-code"
                 value={otp}
                 onChange={(event) =>
-                  setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  {
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6));
+                    setFieldErrors((current) => {
+                      if (!current.otp) {
+                        return current;
+                      }
+
+                      const next = { ...current };
+                      delete next.otp;
+                      return next;
+                    });
+                    setError("");
+                  }
                 }
                 placeholder="000000"
-                className="w-full rounded-[18px] border border-[#d8dff5] bg-white px-4 py-4 text-center font-mono text-2xl tracking-[0.4em] text-[#131b2e] outline-none transition focus:border-[#004ac6] focus:ring-4 focus:ring-[#004ac6]/10"
+                className={`w-full rounded-[18px] border px-4 py-4 text-center font-mono text-2xl tracking-[0.4em] text-[#131b2e] outline-none transition focus:ring-4 ${
+                  fieldErrors.otp
+                    ? "border-[#ba1a1a] bg-[#fff1ef] focus:ring-[#ba1a1a]/10"
+                    : "border-[#d8dff5] bg-white focus:border-[#004ac6] focus:ring-[#004ac6]/10"
+                }`}
                 maxLength={6}
                 required
               />
+              {fieldErrors.otp ? (
+                <p className="text-sm text-[#93000a]">{fieldErrors.otp}</p>
+              ) : null}
             </label>
 
             <button

@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { APP_ROUTES } from "@/config/routes";
 import { assetUrl } from "@/lib/api/client";
+import {
+  getApiErrorMessage,
+  getApiFieldErrors,
+} from "@/lib/api/errors";
 import { getCategories } from "@/modules/categories/api";
 import { getLocationSuggestions } from "@/modules/locations/api";
 import { getProperty, updateProperty } from "@/modules/properties/api";
@@ -97,6 +101,10 @@ const EditPropertyForm: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState<{
+    tone: "error" | "success";
+    text: string;
+  } | null>(null);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<
     LocationSuggestion[]
@@ -144,6 +152,7 @@ const EditPropertyForm: React.FC = () => {
         setLocationQuery(property.location || "");
         setSelectedLocationPlaceId(PROPERTY_LOCATION_EXISTING_PLACE_ID);
         setPropertyMeta(property);
+        setFormMessage(null);
       } catch (error) {
         console.error("Error loading property:", error);
         if (isMounted) {
@@ -202,6 +211,7 @@ const EditPropertyForm: React.FC = () => {
       [name]: value,
     }));
     setErrors((previous) => removeFieldError(previous, String(name)));
+    setFormMessage(null);
   };
 
   const handleChange = (
@@ -240,6 +250,7 @@ const EditPropertyForm: React.FC = () => {
     setSelectedLocationPlaceId("");
     setFormData((previous) => ({ ...previous, location: "" }));
     setErrors((previous) => removeFieldError(previous, "location"));
+    setFormMessage(null);
   };
 
   const handleLocationSelect = (selected: LocationSuggestion) => {
@@ -255,6 +266,7 @@ const EditPropertyForm: React.FC = () => {
       PROPERTY_LOCATION_DROPDOWN_CLOSE_DELAY_MS,
     );
     setErrors((previous) => removeFieldError(previous, "location"));
+    setFormMessage(null);
   };
 
   const handleFilesAdded = (files: File[]) => {
@@ -264,7 +276,11 @@ const EditPropertyForm: React.FC = () => {
       files.length;
 
     if (totalFiles > PROPERTY_IMAGE_UPLOAD_LIMIT) {
-      alert(PROPERTY_FORM_MESSAGES.imageLimitError);
+      setErrors((previous) => ({
+        ...previous,
+        images: PROPERTY_FORM_MESSAGES.imageLimitError,
+      }));
+      setFormMessage(null);
       return;
     }
 
@@ -273,7 +289,11 @@ const EditPropertyForm: React.FC = () => {
     );
 
     if (oversizedFile) {
-      alert(PROPERTY_FORM_MESSAGES.imageSizeError);
+      setErrors((previous) => ({
+        ...previous,
+        images: PROPERTY_FORM_MESSAGES.imageSizeError,
+      }));
+      setFormMessage(null);
       return;
     }
 
@@ -284,6 +304,8 @@ const EditPropertyForm: React.FC = () => {
       images: [...previous.images, ...files],
     }));
     setPreviews((previous) => [...previous, ...nextPreviews]);
+    setErrors((previous) => removeFieldError(previous, "images"));
+    setFormMessage(null);
   };
 
   const removeImage = (index: number, isExisting = false) => {
@@ -318,6 +340,14 @@ const EditPropertyForm: React.FC = () => {
     });
 
     setErrors(nextErrors);
+    setFormMessage(
+      Object.keys(nextErrors).length > 0
+        ? {
+            tone: "error",
+            text: "Please correct the highlighted fields and try again.",
+          }
+        : null,
+    );
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -329,15 +359,25 @@ const EditPropertyForm: React.FC = () => {
     }
 
     setSubmitting(true);
+    setFormMessage(null);
 
     try {
       await updateProperty(String(id), formData);
-
-      alert(PROPERTY_FORM_MESSAGES.editSuccess);
+      setFormMessage({
+        tone: "success",
+        text: PROPERTY_FORM_MESSAGES.editSuccess,
+      });
       await router.push(APP_ROUTES.adminProperties);
     } catch (error) {
       console.error(error);
-      alert(PROPERTY_FORM_MESSAGES.editError);
+      setErrors((previous) => ({
+        ...previous,
+        ...getApiFieldErrors(error),
+      }));
+      setFormMessage({
+        tone: "error",
+        text: getApiErrorMessage(error, PROPERTY_FORM_MESSAGES.editError),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -403,6 +443,7 @@ const EditPropertyForm: React.FC = () => {
       mode="edit"
       formData={formData}
       errors={errors}
+      formMessage={formMessage}
       categories={categories}
       loadingCategories={loadingCategories}
       locationQuery={locationQuery}
